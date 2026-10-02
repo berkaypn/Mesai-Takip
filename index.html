@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#13203A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mesai">
+<title>Mesai ve Mola Takip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F5; --surface:#FFFFFF; --ink:#13203A; --muted:#66748A; --line:#DCE2EA; --track:#E6EAF0;
+  --amber:#F2A541; --amber-ink:#3B2300; --plus:#1F7A4A; --minus:#C0392B;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0C1322; --surface:#151F33; --ink:#E8EDF5; --muted:#8E9BB0; --line:#26324A; --track:#1E2A40;
+    --amber:#F2A541; --amber-ink:#2A1800; --plus:#5DD39A; --minus:#FF8A7A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0C1322; --surface:#151F33; --ink:#E8EDF5; --muted:#8E9BB0; --line:#26324A; --track:#1E2A40;
+  --amber:#F2A541; --amber-ink:#2A1800; --plus:#5DD39A; --minus:#FF8A7A; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-variant-numeric:tabular-nums; line-height:1.4;
+  -webkit-tap-highlight-color:transparent;
+}
+main{max-width:30rem; margin:0 auto; padding:1.1rem 1rem 3rem}
+.plus{color:var(--plus)} .minus{color:var(--minus)}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:22px; padding:1.15rem}
+h2{font-size:.95rem; font-weight:700; margin:1.9rem .25rem .6rem}
+
+/* header */
+.top{display:flex; justify-content:space-between; align-items:center; gap:1rem; margin:0 .25rem 1rem}
+.top h1{margin:0; font-size:1.35rem; font-weight:800; letter-spacing:-.01em}
+.top p{margin:.1rem 0 0; color:var(--muted); font-size:.9rem}
+.pill{flex:none; display:inline-flex; align-items:center; gap:.45rem; padding:.4rem .75rem; border-radius:999px; font-size:.85rem; font-weight:700; background:var(--surface); border:1px solid var(--line)}
+.pill i{width:.55rem; height:.55rem; border-radius:50%; background:var(--muted)}
+.pill.work i{background:var(--plus)} .pill.break i{background:var(--amber)} .pill.done i{background:var(--ink)}
+
+/* today */
+.io{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1rem; align-items:end}
+.field{min-width:0}
+.field input::-webkit-calendar-picker-indicator{opacity:.45}
+.diffrow{display:flex; justify-content:space-between; align-items:baseline; gap:1rem; margin-top:1.1rem}
+.diffrow .lbl{font-size:.85rem; font-weight:600; color:var(--muted)}
+.field label,.field .lbl{display:block; font-size:.78rem; font-weight:600; color:var(--muted); margin:0 0 .2rem}
+.field input{
+  width:100%; font:inherit; font-size:1.55rem; font-weight:800; color:var(--ink); letter-spacing:-.01em;
+  background:transparent; border:0; border-bottom:2px solid var(--line); border-radius:0; padding:.1rem 0 .2rem; min-height:2.6rem;
+}
+.field input:focus{border-bottom-color:var(--ink); outline:none}
+.diff{font-size:1.6rem; font-weight:800; white-space:nowrap; letter-spacing:-.01em}
+
+.tl{margin:.6rem 0 .35rem}
+.bar{position:relative; height:14px; border-radius:7px; background:var(--track); overflow:hidden}
+.bar .w{position:absolute; top:0; bottom:0; background:var(--ink); border-radius:7px}
+.bar .b{position:absolute; top:0; bottom:0; background:var(--amber)}
+.bar .t{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--plus)}
+.tlab{position:relative; height:1.1rem; margin-top:.3rem; font-size:.75rem; color:var(--muted)}
+.tlab span{position:absolute; white-space:nowrap}
+.mini .bar{height:8px; border-radius:4px}
+.mini .bar .w{border-radius:4px}
+.mini .bar .t{top:-2px; bottom:-2px}
+
+.worked{margin:.35rem 0 0; font-size:.9rem; color:var(--muted)}
+.btn{
+  display:block; width:100%; margin-top:1.1rem; padding:1.05rem 1rem;
+  font:inherit; font-size:1.1rem; font-weight:800; border:0; border-radius:16px; cursor:pointer;
+  background:var(--ink); color:var(--surface);
+}
+.btn.ghost{background:transparent; color:var(--ink); box-shadow:inset 0 0 0 2px var(--ink)}
+.btn:active{transform:scale(.985)}
+
+/* break */
+.brk{margin-top:.75rem; transition:background .25s,border-color .25s}
+.brk .row{display:flex; justify-content:space-between; align-items:center; gap:1rem}
+.brk .lbl{margin:0; font-size:.85rem; color:var(--muted); font-weight:600}
+.brk .big{margin:.1rem 0 0; font-size:1.6rem; font-weight:800; letter-spacing:-.01em}
+.brk .go{flex:none; width:auto; margin:0; padding:.95rem 1.2rem; background:var(--amber); color:var(--amber-ink); font-size:1rem}
+.brk.out{background:var(--amber); border-color:var(--amber); color:var(--amber-ink)}
+.brk.out .lbl{color:var(--amber-ink); opacity:.8}
+.timer{font-size:3rem; font-weight:800; letter-spacing:-.02em; line-height:1.05; margin:.25rem 0 0}
+.brk.out .btn{background:var(--amber-ink); color:var(--amber)}
+.link{display:block; margin:.7rem auto 0; background:none; border:0; padding:.3rem; font:inherit; font-size:.9rem; color:inherit; text-decoration:underline; cursor:pointer; opacity:.85}
+.link.armed{font-weight:800; text-decoration:none; opacity:1}
+
+/* summary */
+.sum{padding:.4rem 1.15rem}
+.sum table{width:100%; border-collapse:collapse}
+.sum th,.sum td{padding:.7rem 0 .7rem .5rem; text-align:right; font-weight:800; font-size:.98rem}
+.sum thead th{font-size:.78rem; font-weight:600; color:var(--muted); padding:.55rem 0 .2rem}
+.sum tbody th{text-align:left; font-size:.9rem; font-weight:600; color:var(--muted)}
+.sum tbody tr + tr th,.sum tbody tr + tr td{border-top:1px solid var(--line)}
+.foot{font-size:.78rem; color:var(--muted); margin:.5rem .25rem 0}
+
+/* lists */
+.rows{list-style:none; margin:0; padding:0}
+.rows li{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:.75rem; padding:.7rem 0; border-top:1px solid var(--line)}
+.rows li:first-child{border-top:0}
+.dot{width:.55rem; height:.55rem; border-radius:50%; background:var(--amber)}
+.range{font-size:1.02rem; font-weight:600}
+.dur{font-weight:700}
+.del{background:none; border:1px solid var(--line); color:var(--muted); border-radius:10px; padding:.35rem .6rem; font:inherit; font-size:.8rem; cursor:pointer}
+.del.armed{background:var(--minus); color:#fff; border-color:var(--minus)}
+.listcard{padding:.35rem 1.15rem}
+.empty{color:var(--muted); margin:0; padding:.65rem 0}
+
+details.card{margin-bottom:.55rem; padding:0; overflow:hidden}
+summary{display:block; padding:.95rem 1.15rem; cursor:pointer; list-style:none}
+summary::-webkit-details-marker{display:none}
+.sh{display:flex; justify-content:space-between; gap:1rem}
+.sh .d{font-weight:700}
+.sh .f{font-weight:800; white-space:nowrap}
+.sm{display:flex; justify-content:space-between; gap:1rem; font-size:.85rem; color:var(--muted); margin-top:.15rem}
+.mini{margin-top:.6rem}
+.pastbody{border-top:1px solid var(--line); padding:.8rem 1.15rem .5rem}
+.pastbody .io{grid-template-columns:1fr 1fr; margin-bottom:.4rem}
+.pastbody .field input{font-size:1.25rem}
+
+.mh{display:flex; justify-content:space-between; align-items:baseline; gap:1rem; margin:1.1rem .25rem .5rem}
+.mh b{font-size:.95rem; font-weight:800}
+.mh span{font-size:.85rem; color:var(--muted); text-align:right}
+.mh .plus,.mh .minus{font-weight:700}
+.export.ghost{background:transparent}
+.settings{padding:.3rem 1.15rem}
+.srow{display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.7rem 0}
+.srow + .srow{border-top:1px solid var(--line)}
+.srow .pair{display:flex; align-items:center; gap:.4rem; color:var(--muted)}
+.settings input[type=time]{width:6.4rem; text-align:center; font-size:1.05rem; padding:.45rem .3rem}
+.srow label{flex:1; min-width:0}
+.bar .l{position:absolute; top:0; bottom:0; background:repeating-linear-gradient(45deg,var(--track) 0 3px,var(--line) 3px 6px)}
+.ln{display:block; font-size:.75rem; font-weight:500; color:var(--muted)}
+.settings label{font-weight:600}
+.settings input{width:5.5rem; font:inherit; font-size:1.15rem; font-weight:800; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:.45rem .6rem; text-align:right}
+.export{display:block; width:100%; margin-top:.75rem; padding:.9rem; font:inherit; font-weight:700; background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:16px; cursor:pointer}
+.note{font-size:.8rem; color:var(--muted); margin:1rem 0 0; text-align:center}
+.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(1rem + env(safe-area-inset-bottom,0px)); max-width:calc(100% - 2rem);
+  background:var(--ink); color:var(--surface); padding:.75rem 1rem; border-radius:14px; font-weight:600; font-size:.95rem; z-index:10}
+
+.btn:focus-visible,.link:focus-visible,.del:focus-visible,summary:focus-visible,.export:focus-visible,.settings input:focus-visible{outline:3px solid var(--muted); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.brk{transition:none}.btn:active{transform:none}}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <div><h1>Mesai takip</h1><p id="todayLabel">Bugün</p></div>
+    <span class="pill" id="pill"><i></i><span id="pillText">Henüz giriş yok</span></span>
+  </header>
+
+  <section class="card" aria-live="polite">
+    <div id="todayIO"></div>
+    <div class="tl" id="todayTL"></div>
+    <p class="worked" id="worked">&nbsp;</p>
+    <button class="btn" id="dayBtn" type="button">İşe geldim</button>
+  </section>
+
+  <section class="card brk" id="brk" aria-live="polite">
+    <div class="row" id="brkIdle">
+      <div><p class="lbl">Bugünkü mola</p><p class="big" id="brkTotal">0 dk</p></div>
+      <button class="btn go" id="punch" type="button">Molaya çık</button>
+    </div>
+    <div id="brkOut" hidden>
+      <p class="lbl" id="since">Moladasın</p>
+      <p class="timer" id="timer">0:00</p>
+      <button class="btn" id="punchIn" type="button">İçeri girdim</button>
+      <button class="link" id="cancel" type="button">Yanlışlıkla bastım, iptal et</button>
+    </div>
+  </section>
+
+  <h2>Özet</h2>
+  <div class="card sum">
+    <table>
+      <thead><tr><th></th><th>Bu hafta</th><th>Bu ay</th><th>Toplam</th></tr></thead>
+      <tbody>
+        <tr><th>Fark</th><td id="fWeek">0 dk</td><td id="fMonth">0 dk</td><td id="fAll">0 dk</td></tr>
+        <tr><th>Mola</th><td id="tWeek">0 dk</td><td id="tMonth">0 dk</td><td id="tAll">0 dk</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="foot">Fark, giriş ve çıkışı tamamlanmış günlerden hesaplanır. Yemek arası çalışmaya da molaya da sayılmaz.</p>
+
+  <h2>Bugünkü molalar</h2>
+  <div class="card listcard" id="today"></div>
+
+  <h2 id="pastH" hidden>Geçmiş kayıtlar</h2>
+  <div id="past"></div>
+
+  <h2>Ayarlar</h2>
+  <div class="card settings">
+    <div class="srow">
+      <label for="target">Günlük süre, yemek dahil (saat)</label>
+      <input id="target" type="number" inputmode="decimal" step="0.25" min="1" max="16" value="9.5">
+    </div>
+    <div class="srow">
+      <label for="lunchS">Yemek arası</label>
+      <span class="pair"><input id="lunchS" type="time" value="12:00" aria-label="Yemek arası başlangıç">–<input id="lunchE" type="time" value="13:00" aria-label="Yemek arası bitiş"></span>
+    </div>
+  </div>
+  <button class="export" id="export" type="button">Tüm kayıtları indir (CSV)</button>
+  <button class="export ghost" id="importBtn" type="button">Yedekten geri yükle (CSV)</button>
+  <input type="file" id="importFile" accept=".csv,text/csv" hidden>
+  <p class="note" id="note">Kayıtlar bu cihazda tutuluyor.</p>
+  <div class="toast" id="toast" role="status" hidden></div>
+</main>
+
+<script>
+(function(){
+  const LS = "molaTakip:v1";
+  const $ = id => document.getElementById(id);
+  let state = { days:{}, open:null, target:570, lunchS:720, lunchE:780 };
+
+  const norm = d => Array.isArray(d) ? { breaks:d, in:null, out:null }
+    : { breaks:Array.isArray(d && d.breaks) ? d.breaks : [], in: typeof (d&&d.in) === "number" ? d.in : null, out: typeof (d&&d.out) === "number" ? d.out : null };
+
+  try {
+    const raw = localStorage.getItem(LS);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p && p.days) {
+        const days = {}; for (const k in p.days) days[k] = norm(p.days[k]);
+        state = { days, open: p.open ?? null, target: typeof p.target === "number" ? p.target : 570,
+          lunchS: p.lunchS === undefined ? 720 : p.lunchS, lunchE: p.lunchE === undefined ? 780 : p.lunchE };
+      }
+    }
+  } catch(e){}
+
+  const STANDALONE = !window.claude && window.top === window;
+  const LOCAL_NOTE = STANDALONE ? "Kayıtlar bu telefonda tutuluyor. Arada bir yedek al."
+    : "Kayıtlar bu tarayıcıda tutuluyor ve kalıcı olmayabilir. Arada bir yedek al.";
+  if (STANDALONE) {
+    const add = (rel, href) => { const l = document.createElement("link"); l.rel = rel; l.href = href; document.head.appendChild(l); };
+    add("manifest", "manifest.webmanifest"); add("apple-touch-icon", "apple-touch-icon.png");
+    if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch(e){}
+  }
+
+  // ---------- storage ----------
+  let mode = "local", db = null, uid = null, chain = Promise.resolve(), unsub = null;
+  function saveLocal(){ try { localStorage.setItem(LS, JSON.stringify(state)); } catch(e){} }
+  function goLocal(msg){
+    mode = "local"; if (unsub) { try { unsub(); } catch(e){} unsub = null; }
+    $("note").textContent = msg; saveLocal();
+  }
+  function enqueue(fn){
+    if (mode !== "db") return;
+    chain = chain.then(fn).catch(err => {
+      if (err && err.code === "unavailable") return new Promise(r => setTimeout(r, 800 + Math.random()*800)).then(fn).catch(()=>{});
+      if (err && (err.code === "invalid_argument" || err.code === "revoked" || err.code === "not_granted"))
+        goLocal(LOCAL_NOTE);
+    });
+  }
+  const isEmpty = d => !d || (!d.breaks.length && d.in == null && d.out == null);
+  function writeDay(key){
+    const d = state.days[key];
+    if (isEmpty(d)) delete state.days[key];
+    saveLocal();
+    const body = isEmpty(d) ? null : { date:key, breaks:d.breaks.slice(), in:d.in, out:d.out };
+    enqueue(() => { const ref = db.doc("data/users/" + uid + "/d-" + key); return body ? ref.set(body) : ref.delete(); });
+  }
+  function writeOpen(){ saveLocal(); const open = state.open; enqueue(() => db.doc("data/users/" + uid + "/state").set({ open })); }
+  function writeSettings(){ saveLocal(); const body = { target:state.target, lunchS:state.lunchS, lunchE:state.lunchE }; enqueue(() => db.doc("data/users/" + uid + "/settings").set(body)); }
+
+  async function connect(){
+    if (!window.claude || typeof window.claude.use !== "function") return;
+    const [d, u] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+    if (!d || !u) return;
+    const [id, owner, editor, canWrite] = await Promise.all([u.id(), u.isOwner(), u.canEdit(), u.can("data.write")]);
+    if (!id || !(owner || editor || canWrite === true)) return;   // stay on this device
+    db = d; uid = id; mode = "db";
+    $("note").textContent = "Kayıtlar hesabına kaydediliyor, her cihazdan görebilirsin.";
+    let first = true;
+    unsub = db.collection("data/users/" + uid).onSnapshot(snap => {
+      if (mode !== "db") return;
+      if (first) {
+        first = false;
+        const hasLocal = Object.keys(state.days).length || state.open;
+        if (snap.empty && hasLocal) {
+          setTimeout(() => { Object.keys(state.days).forEach(writeDay); writeOpen(); writeSettings(); }, 0);
+          return;
+        }
+      }
+      const days = {}; let open = null, target = state.target, lunchS = state.lunchS, lunchE = state.lunchE;
+      snap.docs.forEach(doc => {
+        const b = doc.data(); if (!b) return;
+        if (doc.id === "state") open = typeof b.open === "number" ? b.open : null;
+        else if (doc.id === "settings") { if (typeof b.target === "number") target = b.target; if (b.lunchS !== undefined) lunchS = b.lunchS; if (b.lunchE !== undefined) lunchE = b.lunchE; }
+        else if (doc.id.startsWith("d-")) days[doc.id.slice(2)] = norm(b);
+      });
+      state = { days, open, target, lunchS, lunchE };
+      saveLocal(); render();
+    }, () => goLocal(LOCAL_NOTE));
+  }
+
+  // ---------- helpers ----------
+  const pad = n => String(n).padStart(2, "0");
+  const dayKey = ms => { const d = new Date(ms); return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); };
+  const keyStart = key => { const [y,m,d] = key.split("-").map(Number); return new Date(y, m-1, d).getTime(); };
+  const hm = ms => { const d = new Date(ms); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
+  const mins = ms => Math.round(ms / 60000);
+  const dk = ms => ms < 60000 && ms > 0 ? "<1 dk" : mins(ms) + " dk";
+  const hdur = ms => { const m = Math.abs(mins(ms)); return m >= 60 ? Math.floor(m/60) + " sa" + (m%60 ? " " + (m%60) + " dk" : "") : m + " dk"; };
+  const short = ms => hdur(ms);
+  const signed = (ms, f = hdur) => { const m = mins(ms); return (m > 0 ? "+" : m < 0 ? "−" : "") + f(ms); };
+  const cls = ms => { const m = mins(ms); return m > 0 ? "plus" : m < 0 ? "minus" : ""; };
+  const clockFmt = ms => { const s = Math.max(0, Math.floor(ms/1000)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60; return (h ? h + ":" + pad(m) : m) + ":" + pad(x); };
+  const dateLabel = (key, o) => new Date(keyStart(key)).toLocaleDateString("tr-TR", o || { day:"numeric", month:"long", weekday:"long" });
+  const targetMs = () => state.target * 60000;
+  const getDay = key => state.days[key] || (state.days[key] = { breaks:[], in:null, out:null });
+  const lunchLen = () => (state.lunchS != null && state.lunchE != null && state.lunchE > state.lunchS) ? (state.lunchE - state.lunchS) * 60000 : 0;
+  const lunchWin = k => lunchLen() ? [keyStart(k) + state.lunchS * 60000, keyStart(k) + state.lunchE * 60000] : null;
+  const ov = (a, b, w) => w ? Math.max(0, Math.min(b, w[1]) - Math.max(a, w[0])) : 0;
+  const netWork = (k, a, b) => (b - a) - ov(a, b, lunchWin(k));
+  const netTarget = () => targetMs() - lunchLen();
+  const dayFark = (k, x) => netWork(k, x.in, x.out) - netTarget();
+  const bCount = (a, b) => (b - a) - ov(a, b, lunchWin(dayKey(a)));
+  const breakSum = d => d.breaks.reduce((a,b) => a + bCount(b.s, b.e), 0);
+  function targetEnd(k, inMs){
+    const w = lunchWin(k), need = netTarget();
+    if (!w) return inMs + need;
+    let st = inMs; if (st >= w[0] && st < w[1]) st = w[1];
+    if (st < w[0]) { const e = st + need; return e > w[0] ? e + (w[1] - w[0]) : e; }
+    return st + need;
+  }
+  const minToHm = m => m == null ? "" : pad(Math.floor(m / 60)) + ":" + pad(m % 60);
+
+  function fieldHtml(key, d, f, label){
+    return '<div class="field"><label for="' + f + '-' + key + '">' + label + '</label><input type="time" id="' + f + '-' + key + '" data-k="' + key + '" data-f="' + f + '" value="' + (d[f] == null ? "" : hm(d[f])) + '"></div>';
+  }
+  function timelineHtml(k, d, now, withLabels, openStart){
+    if (d.in == null) return withLabels ? '<div class="bar"></div><div class="tlab"><span style="left:0">Giriş bekleniyor</span></div>' : "";
+    const end = d.out != null ? d.out : now;
+    const tEnd = targetEnd(k, d.in);
+    const span = Math.max(end, tEnd) - d.in || 1;
+    const pct = ms => Math.max(0, Math.min(100, (ms - d.in) / span * 100));
+    let h = '<div class="bar"><div class="w" style="left:0;width:' + pct(end) + '%"></div>';
+    const list = d.breaks.slice(); if (openStart) list.push({ s:openStart, e:now });
+    list.forEach(b => { const l = pct(b.s), r = pct(Math.min(b.e, end)); if (r > l) h += '<div class="b" style="left:' + l + '%;width:' + Math.max(r - l, .6) + '%"></div>'; });
+    const w = lunchWin(k);
+    if (w) { const l = pct(w[0]), r = pct(w[1]); if (r > l) h += '<div class="l" style="left:' + l + '%;width:' + (r - l) + '%"></div>'; }
+    h += '<div class="t" style="left:calc(' + pct(tEnd) + '% - 1px)"></div></div>';
+    if (withLabels) {
+      const tp = pct(tEnd);
+      h += '<div class="tlab"><span style="left:0">' + hm(d.in) + '</span><span style="' + (tp > 75 ? "right:" + (100 - tp) + "%" : "left:" + tp + "%") + '">Hedef ' + hm(tEnd) + "</span></div>";
+    }
+    return h;
+  }
+  function lunchNote(b){
+    const o = ov(b.s, b.e, lunchWin(dayKey(b.s))); if (!o) return "";
+    return '<small class="ln">' + (o >= b.e - b.s ? "Yemek arasında, sayılmadı" : mins(o) + " dk yemek arası düşüldü") + "</small>";
+  }
+  function rowsHtml(key, list){
+    return '<ul class="rows">' + list.map((b, i) =>
+      '<li><span class="dot"></span><span class="range">' + hm(b.s) + " – " + hm(b.e) + lunchNote(b) + '</span><span class="dur">' + (bCount(b.s, b.e) > 0 ? dk(bCount(b.s, b.e)) : "0 dk") +
+      '</span><button class="del" type="button" data-k="' + key + '" data-i="' + i + '" aria-label="' + hm(b.s) + ' molasını sil">Sil</button></li>').join("") + "</ul>";
+  }
+
+  // ---------- render ----------
+  function renderLive(){
+    const now = Date.now(), d = new Date(now), today = dayKey(now);
+    const dayStart = keyStart(today);
+    const weekStart = dayStart - ((d.getDay() + 6) % 7) * 86400000;
+    const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+
+    const bSince = b0 => { let t = 0; for (const k in state.days) for (const b of state.days[k].breaks) if (b.s >= b0) t += bCount(b.s, b.e); if (state.open && state.open >= b0) t += bCount(state.open, now); return t; };
+    $("brkTotal").textContent = dk(bSince(dayStart));
+    $("tWeek").textContent = short(bSince(weekStart)); $("tMonth").textContent = short(bSince(monthStart)); $("tAll").textContent = short(bSince(0));
+
+    let fw = 0, fm = 0, fa = 0;
+    for (const k in state.days) {
+      const x = state.days[k]; if (x.in == null || x.out == null) continue;
+      const f = dayFark(k, x), ks = keyStart(k);
+      fa += f; if (ks >= monthStart) fm += f; if (ks >= weekStart) fw += f;
+    }
+    [["fWeek",fw],["fMonth",fm],["fAll",fa]].forEach(([id,v]) => { const el = $(id); el.textContent = signed(v, short); el.className = cls(v); });
+
+    const t = state.days[today] || { breaks:[], in:null, out:null };
+    const diffEl = $("todayDiff");
+    if (t.in != null) {
+      const end = t.out != null ? t.out : now, work = Math.max(0, netWork(today, t.in, end)), f = work - netTarget();
+      if (diffEl) { diffEl.textContent = signed(f, short); diffEl.className = "diff " + cls(f); }
+      $("worked").textContent = t.out != null ? "Bugün net " + hdur(work) + " çalıştın."
+        : (f < 0 ? "Şu ana kadar net " + hdur(work) + ", hedefe " + hdur(-f) + " kaldı." : "Hedefi geçtin, şu ana kadar net " + hdur(work) + ".");
+    } else {
+      if (diffEl) { diffEl.textContent = "–"; diffEl.className = "diff"; }
+      $("worked").textContent = "Gelince \u201cİşe geldim\u201d butonuna bas.";
+    }
+    $("todayTL").innerHTML = timelineHtml(today, t, now, true, state.open && dayKey(state.open) === today ? state.open : null);
+    if (state.open) $("timer").textContent = clockFmt(now - state.open);
+  }
+
+  function render(){
+    const now = Date.now(), today = dayKey(now);
+    const t = state.days[today] || { breaks:[], in:null, out:null };
+    $("todayLabel").textContent = dateLabel(today);
+
+    const ae = document.activeElement;
+    if (!(ae && ae.closest && ae.closest("#todayIO")))
+      $("todayIO").innerHTML = '<div class="io">' + fieldHtml(today, t, "in", "Giriş") + fieldHtml(today, t, "out", "Çıkış") +
+        '</div><div class="diffrow"><span class="lbl">Bugünkü fark</span><span class="diff" id="todayDiff">–</span></div>';
+
+    const pill = $("pill"), pt = $("pillText");
+    if (state.open) { pill.className = "pill break"; pt.textContent = "Moladasın"; }
+    else if (t.in == null) { pill.className = "pill"; pt.textContent = "Henüz giriş yok"; }
+    else if (t.out == null) { pill.className = "pill work"; pt.textContent = "Mesaidesin"; }
+    else { pill.className = "pill done"; pt.textContent = "Mesai bitti"; }
+
+    const dayBtn = $("dayBtn");
+    if (t.in == null) { dayBtn.hidden = false; dayBtn.textContent = "İşe geldim"; dayBtn.className = "btn"; }
+    else if (t.out == null) { dayBtn.hidden = false; dayBtn.textContent = "İşten çıktım"; dayBtn.className = "btn ghost"; }
+    else dayBtn.hidden = true;
+
+    const open = !!state.open;
+    $("brk").classList.toggle("out", open);
+    $("brkIdle").hidden = open; $("brkOut").hidden = !open;
+    if (open) $("since").textContent = "Moladasın, çıkış " + hm(state.open);
+
+    const tl = t.breaks.slice().sort((a,b) => a.s - b.s);
+    $("today").innerHTML = tl.length ? rowsHtml(today, tl) : '<p class="empty">Bugün henüz mola kaydı yok.</p>';
+
+    const openSet = new Set([...document.querySelectorAll("#past details[open]")].map(x => x.dataset.k));
+    const past = Object.keys(state.days).filter(k => k !== today && !isEmpty(state.days[k])).sort().reverse();
+    $("pastH").hidden = !past.length;
+    let lastMonth = "";
+    $("past").innerHTML = past.map(k => {
+      let head = "";
+      const mk = k.slice(0, 7);
+      if (mk !== lastMonth) {
+        lastMonth = mk;
+        const mDays = past.filter(x => x.slice(0, 7) === mk);
+        let mf = 0, mb = 0, done = 0;
+        mDays.forEach(x => { const y = state.days[x]; mb += breakSum(y); if (y.in != null && y.out != null) { mf += dayFark(x, y); done++; } });
+        const [yy, mm] = mk.split("-").map(Number);
+        head = '<div class="mh"><b>' + new Date(yy, mm - 1, 1).toLocaleDateString("tr-TR", { month:"long", year:"numeric" }) + "</b><span>" +
+          (done ? 'Fark <span class="' + cls(mf) + '">' + signed(mf) + "</span>, " : "") + "mola " + hdur(mb) + "</span></div>";
+      }
+      return head + pastCard(k);
+    }).join("");
+    function pastCard(k){
+      const x = state.days[k], l = x.breaks.slice().sort((a,b) => a.s - b.s), bs = breakSum(x);
+      let f = '<span class="f">–</span>', span = "Giriş/çıkış eksik";
+      if (x.in != null && x.out != null) { const v = dayFark(k, x); f = '<span class="f ' + cls(v) + '">' + signed(v, short) + "</span>"; span = hm(x.in) + " – " + hm(x.out); }
+      else if (x.in != null) span = hm(x.in) + " – çıkış eksik";
+      const mini = x.in != null && x.out != null ? '<div class="tl mini">' + timelineHtml(k, x, now, false, null) + "</div>" : "";
+      return '<details class="card" data-k="' + k + '"' + (openSet.has(k) ? " open" : "") + '><summary>' +
+        '<div class="sh"><span class="d">' + dateLabel(k, { day:"numeric", month:"long", weekday:"short" }) + "</span>" + f + "</div>" +
+        '<div class="sm"><span>' + span + "</span><span>" + l.length + " mola, " + mins(bs) + " dk</span></div>" + mini + "</summary>" +
+        '<div class="pastbody"><div class="io">' + fieldHtml(k, x, "in", "Giriş") + fieldHtml(k, x, "out", "Çıkış") + "</div>" +
+        (l.length ? rowsHtml(k, l) : '<p class="empty">Mola kaydı yok.</p>') + "</div></details>";
+    }
+
+    const ti = $("target"); if (document.activeElement !== ti) ti.value = String(state.target / 60);
+    if (document.activeElement !== $("lunchS")) $("lunchS").value = minToHm(state.lunchS);
+    if (document.activeElement !== $("lunchE")) $("lunchE").value = minToHm(state.lunchE);
+    renderLive();
+  }
+
+  // ---------- in-page confirm & messages ----------
+  let toastTimer = 0;
+  function toast(msg){
+    const el = $("toast"); el.textContent = msg; el.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3500);
+  }
+  function arm(btn, label, action){
+    if (btn.dataset.armed === "1") { clearTimeout(Number(btn.dataset.timer)); btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = btn.dataset.orig; action(); return; }
+    btn.dataset.orig = btn.textContent; btn.dataset.armed = "1"; btn.classList.add("armed"); btn.textContent = label;
+    btn.dataset.timer = String(setTimeout(() => { btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = btn.dataset.orig; }, 3000));
+  }
+
+  // ---------- actions ----------
+  const buzz = () => { if (navigator.vibrate) try { navigator.vibrate(30); } catch(e){} };
+  let lock = 0;
+  const debounce = () => { const n = Date.now(); if (n - lock < 800) return false; lock = n; return true; };
+  function closeBreak(now){
+    if (!state.open) return null;
+    const s = state.open, key = dayKey(s);
+    state.open = null; getDay(key).breaks.push({ s, e: now });
+    return key;
+  }
+
+  $("dayBtn").addEventListener("click", () => {
+    if (!debounce()) return; buzz();
+    const now = Date.now(), key = dayKey(now), d = getDay(key);
+    if (d.in == null) { d.in = now; writeDay(key); toast("Giriş " + hm(now) + " olarak kaydedildi."); }
+    else if (d.out == null) {
+      const bk = closeBreak(now);
+      d.out = now;
+      writeDay(key); if (bk && bk !== key) writeDay(bk); if (bk) writeOpen();
+      toast("Çıkış " + hm(now) + " olarak kaydedildi.");
+    }
+    render();
+  });
+  $("punch").addEventListener("click", () => {
+    if (!debounce() || state.open) return; buzz();
+    state.open = Date.now(); writeOpen(); render();
+  });
+  $("punchIn").addEventListener("click", () => {
+    if (!debounce() || !state.open) return; buzz();
+    const now = Date.now(), s = state.open, key = closeBreak(now);
+    writeDay(key); writeOpen(); render(); toast("Mola " + dk(now - s) + " olarak kaydedildi.");
+  });
+  $("cancel").addEventListener("click", () => {
+    if (!state.open) return;
+    arm($("cancel"), "Silmek için tekrar bas", () => { state.open = null; writeOpen(); render(); toast("Mola kaydı iptal edildi."); });
+  });
+
+  document.addEventListener("click", e => {
+    const btn = e.target.closest(".del"); if (!btn) return;
+    const k = btn.dataset.k, i = Number(btn.dataset.i), d = state.days[k]; if (!d) return;
+    const target = d.breaks.slice().sort((a,b) => a.s - b.s)[i]; if (!target) return;
+    arm(btn, "Emin misin?", () => {
+      d.breaks = d.breaks.filter(b => !(b.s === target.s && b.e === target.e));
+      writeDay(k); render(); toast(hm(target.s) + " – " + hm(target.e) + " molası silindi.");
+    });
+  });
+
+  document.addEventListener("change", e => {
+    const inp = e.target;
+    if (inp.id === "target") {
+      const h = parseFloat(String(inp.value).replace(",", "."));
+      if (!(h >= 1 && h <= 16)) { inp.value = String(state.target / 60); toast("1 ile 16 saat arasında bir değer gir."); return; }
+      state.target = Math.round(h * 60); writeSettings(); render(); return;
+    }
+    if (inp.id === "lunchS" || inp.id === "lunchE") {
+      const toM = v => { if (!v) return null; const [h, m] = v.split(":").map(Number); return h * 60 + m; };
+      const sM = toM($("lunchS").value), eM = toM($("lunchE").value);
+      if ((sM == null) !== (eM == null)) return;            // wait until both are set (or both cleared)
+      if (sM != null && eM <= sM) { toast("Yemek arası bitişi başlangıçtan sonra olmalı."); render(); return; }
+      state.lunchS = sM; state.lunchE = eM; writeSettings(); inp.blur(); render();
+      toast(sM == null ? "Yemek arası kaldırıldı." : "Yemek arası " + minToHm(sM) + " – " + minToHm(eM) + " olarak kaydedildi.");
+      return;
+    }
+    if (!inp.dataset || !inp.dataset.f) return;
+    const k = inp.dataset.k, f = inp.dataset.f, d = getDay(k);
+    let ms = null;
+    if (inp.value) { const [h, m] = inp.value.split(":").map(Number); ms = keyStart(k) + (h * 60 + m) * 60000; }
+    const other = f === "in" ? d.out : d.in;
+    if (ms != null && other != null && (f === "in" ? ms > other : ms < other)) {
+      toast("Çıkış saati giriş saatinden önce olamaz."); inp.blur(); render(); return;
+    }
+    d[f] = ms; writeDay(k); inp.blur(); render();
+  });
+
+  $("export").addEventListener("click", async () => {
+    const keys = Object.keys(state.days).sort();
+    const c = n => n.toFixed(0);
+    const lines = ["Tarih;Giriş;Çıkış;Net çalışılan (dk);Fark (dk);Mola sayısı;Mola (dk)"];
+    let fTot = 0, bTot = 0;
+    keys.forEach(k => {
+      const x = state.days[k], bs = breakSum(x) / 60000; bTot += bs;
+      let w = "", f = "";
+      if (x.in != null && x.out != null) { const wm = netWork(k, x.in, x.out) / 60000; w = c(wm); const fm = dayFark(k, x) / 60000; f = c(fm); fTot += fm; }
+      lines.push([k, x.in != null ? hm(x.in) : "", x.out != null ? hm(x.out) : "", w, f, x.breaks.length, c(bs)].join(";"));
+    });
+    lines.push(["Toplam", "", "", "", c(fTot), "", c(bTot)].join(";"));
+    lines.push("", "Molalar", "Tarih;Çıkış;Giriş;Süre (dk);Sayılan (dk)");
+    keys.forEach(k => state.days[k].breaks.slice().sort((a,b) => a.s - b.s).forEach(b =>
+      lines.push([k, hm(b.s), hm(b.e), ((b.e - b.s) / 60000).toFixed(1).replace(".", ","), (bCount(b.s, b.e) / 60000).toFixed(1).replace(".", ",")].join(";"))));
+    const csv = "\ufeff" + lines.join("\r\n");
+    const name = "mesai-mola-" + dayKey(Date.now()) + ".csv";
+    let dl = null;
+    try { if (window.claude && window.claude.use) dl = await window.claude.use("downloads"); } catch(e){}
+    if (dl) {
+      try { await dl.save({ filename:name, data:csv }); return; }
+      catch(err) { if (err && err.code === "declined") return; }
+    }
+    if (window.top === window) {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })); a.download = name;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      toast("Yedek dosyası indirildi."); return;
+    }
+    try { await navigator.clipboard.writeText(csv); toast("Kayıtlar panoya kopyalandı."); } catch(e) { toast("İndirme bu görünümde kullanılamıyor."); }
+  });
+
+  function importCsv(text){
+    const touched = new Set(); let section = "days";
+    const toMs = (k, t) => { const m = /^(\d{1,2}):(\d{2})$/.exec((t || "").trim()); return m ? keyStart(k) + (Number(m[1]) * 60 + Number(m[2])) * 60000 : null; };
+    text.replace(/^\ufeff/, "").split(/\r?\n/).forEach(line => {
+      if (line.trim() === "Molalar") { section = "breaks"; return; }
+      const c = line.split(";"); const k = (c[0] || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+      const d = getDay(k);
+      if (section === "days") {
+        const i = toMs(k, c[1]), o = toMs(k, c[2]);
+        if (d.in == null && i != null) d.in = i;
+        if (d.out == null && o != null && (d.in == null || o >= d.in)) d.out = o;
+      } else {
+        const s0 = toMs(k, c[1]), e0 = toMs(k, c[2]);
+        if (s0 != null && e0 != null && e0 >= s0 && !d.breaks.some(b => Math.abs(b.s - s0) < 60000)) d.breaks.push({ s:s0, e:e0 });
+      }
+      touched.add(k);
+    });
+    touched.forEach(writeDay);
+    return touched.size;
+  }
+  $("importBtn").addEventListener("click", () => $("importFile").click());
+  $("importFile").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try { const n = importCsv(await f.text()); render(); toast(n ? n + " günlük kayıt yüklendi." : "Dosyada kayıt bulunamadı."); }
+    catch(err) { toast("Dosya okunamadı."); }
+    e.target.value = "";
+  });
+
+  $("note").textContent = LOCAL_NOTE;
+  setInterval(renderLive, 1000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+  render();
+  connect();
+})();
+</script>
+</body>
+</html>
