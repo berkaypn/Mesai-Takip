@@ -115,9 +115,8 @@ button{font:inherit; color:inherit}
 .mnav button{width:2.6rem; height:2.6rem; border-radius:12px; border:1px solid var(--line); background:var(--surface); font-size:1.2rem; font-weight:800; cursor:pointer}
 .mstats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin-bottom:.8rem}
 .mstats .tile b,.tiles .tile b{font-size:.98rem; white-space:nowrap}
-.mstats .plus,.mstats .minus,.weeks .plus,.weeks .minus{color:var(--ink)}
 @media (max-width:370px){.mstats .tile b,.tiles .tile b{font-size:.82rem; white-space:normal}}
-.cal{padding:.8rem .65rem}
+.cal{padding:.8rem .65rem; box-shadow:0 8px 24px rgba(19,32,58,.04)}
 .dow,.grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px}
 .dow span{text-align:center; font-size:.7rem; font-weight:700; color:var(--muted); padding-bottom:.35rem}
 .cd{position:relative; aspect-ratio:1 / 1.12; border-radius:10px; border:1px solid var(--line); background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.08rem; cursor:pointer; padding:0; overflow:hidden}
@@ -125,28 +124,46 @@ button{font:inherit; color:inherit}
 .cd .cf{font-size:.62rem; font-weight:800; line-height:1.1; min-height:.7rem}
 .cd.blank{visibility:hidden}
 .cd .cf{color:var(--muted)}
-.cd.s-open{border-style:dashed}
-.cd.s-open .cf{color:var(--minus)}
+.cd.s-pos{background:var(--c-pos); border-color:var(--plus)}
+.cd.s-pos .cf{color:var(--plus)}
+.cd.s-neg{background:var(--c-neg); border-color:var(--minus)}
+.cd.s-neg .cf{color:var(--minus)}
+.cd.s-open,.cd.s-live{background:repeating-linear-gradient(135deg,var(--surface) 0 6px,var(--c-open) 6px 12px); border:1.5px dashed var(--amber)}
+.cd.s-open .cf,.cd.s-live .cf{color:var(--ink)}
 .cd.s-we{background:transparent}
 .cd.s-future{background:transparent; opacity:.45}
 .cd.s-plan{opacity:.75}
 .cd.today{box-shadow:inset 0 0 0 2px var(--ink)}
 .cd .flag{position:absolute; top:3px; right:4px; font-size:.55rem; font-weight:800; color:var(--minus)}
-.canias-alert{background:var(--info-bg); color:var(--ink)}
-.tabs #taskBadge{background:var(--ink); color:var(--surface)}
-.canias-note{font-size:.82rem; color:var(--muted); margin:0 0 .6rem}
+.status-guide{display:flex; flex-wrap:wrap; gap:.35rem .7rem; margin:.65rem .2rem .25rem; font-size:.76rem; color:var(--muted)}
+.status-guide span{display:inline-flex; align-items:center; gap:.3rem}
+.status-guide i{width:.64rem; height:.64rem; border-radius:3px; border:1px solid currentColor}
+.status-guide .good{background:var(--c-pos); color:var(--plus)}
+.status-guide .bad{background:var(--c-neg); color:var(--minus)}
+.status-guide .wait{background:var(--c-open); color:var(--amber)}
+.canias-alert{background:var(--c-open); color:var(--ink); border:1px solid var(--amber)}
+.tabs #taskBadge{background:var(--amber); color:var(--amber-ink)}
+.notes-intro{padding:1.1rem 1.15rem; border-left:4px solid var(--amber); box-shadow:0 8px 24px rgba(19,32,58,.04)}
+.notes-intro .eyebrow{margin:0 0 .15rem; font-size:.7rem; letter-spacing:.09em; font-weight:800; color:var(--muted)}
+.notes-intro h2{margin:0; font-size:1.2rem; letter-spacing:-.02em}
+.notes-intro p:last-child{margin:.35rem 0 0; color:var(--muted); font-size:.85rem}
+.notes-summary{display:flex; justify-content:space-between; align-items:baseline; margin:1.3rem .2rem .55rem}
+.notes-summary h3{margin:0; font-size:.94rem}
+.notes-summary b{font-size:.82rem; color:var(--muted)}
+.notes-paper{padding:.25rem 1.05rem; box-shadow:0 8px 24px rgba(19,32,58,.04)}
 .canias-empty{margin:0; color:var(--muted); font-size:.88rem}
-.canias-row{padding:.85rem 0; border-top:1px solid var(--line)}
-.canias-row:first-child{border-top:0; padding-top:0}
-.canias-row:last-child{padding-bottom:0}
+.canias-row{position:relative; padding:.95rem .05rem .95rem .9rem; border-bottom:1px dashed var(--line)}
+.canias-row::before{content:""; position:absolute; top:1.05rem; bottom:1.05rem; left:0; border-left:3px solid var(--amber); border-radius:3px}
+.canias-row:last-child{border-bottom:0}
 .canias-head{display:flex; justify-content:space-between; align-items:center; gap:.8rem}
 .canias-head strong{font-size:.92rem}
 .canias-row small{display:block; color:var(--muted); font-size:.77rem; margin:.18rem 0 .5rem}
-.canias-times{font-weight:800; font-size:.9rem; line-height:1.6}
+.canias-times{font-weight:800; font-size:.92rem; line-height:1.65; margin-top:.3rem}
 .canias-btn{flex:none; border:1px solid var(--ink); background:var(--ink); color:var(--surface); border-radius:10px; padding:.55rem .7rem; font-size:.8rem; font-weight:800; cursor:pointer}
 .canias-btn:disabled{opacity:.45; cursor:default}
-.canias-done{margin-top:.75rem; font-size:.8rem; color:var(--muted)}
-.canias-done summary{cursor:pointer}
+.canias-done{margin:.5rem 0; font-size:.82rem; color:var(--muted)}
+.canias-done summary{cursor:pointer; padding:.7rem 0; font-weight:700}
+.canias-done .canias-row::before{border-color:var(--plus)}
 .canias-done .canias-btn{background:transparent; color:var(--ink); border-color:var(--line)}
 .weeks{list-style:none; margin:0; padding:.2rem 1rem}
 .weeks li{display:grid; grid-template-columns:minmax(0,1fr) 4.9rem 2.1rem 5.6rem; gap:.35rem; align-items:center; padding:.6rem 0; border-top:1px solid var(--line); font-size:clamp(.78rem, 1.6vw + .45rem, .88rem)}
@@ -285,19 +302,32 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   <section id="tab-log" hidden>
     <div class="mnav"><button type="button" id="mPrev" aria-label="Önceki ay">‹</button><b id="mTitle"></b><button type="button" id="mNext" aria-label="Sonraki ay">›</button></div>
     <div class="mstats" id="mStats"></div>
-    <div class="sec"><h2>Canias’a girilecekler</h2></div>
-    <p class="canias-note">Dış görev saatlerini Canias’a elle girdikten sonra “Girdim”e dokun.</p>
-    <div class="card" id="caniasList" aria-live="polite"></div>
     <div class="sec"><h2>Takvim</h2></div>
     <div class="card cal">
       <div class="dow"><span>Pt</span><span>Sa</span><span>Ça</span><span>Pe</span><span>Cu</span><span>Ct</span><span>Pz</span></div>
       <div class="grid" id="cal"></div>
     </div>
-    <p class="canias-note" style="margin:.55rem .2rem 0">Süre farkı ve izin türü günün içinde yazılı. Kesik çerçeve eksik kaydı, ! kontrol gereken ihlali gösterir.</p>
+    <div class="status-guide" aria-label="Takvim açıklamaları">
+      <span><i class="good"></i>Yeşil: artı süre</span>
+      <span><i class="bad"></i>Kırmızı: eksik süre</span>
+      <span><i class="wait"></i>Sarı çizgili: açık kayıt</span>
+    </div>
+    <p class="foot" style="margin-top:.25rem">! çekirdek saat ihlalini gösterir. İzin ve tatil günleri adıyla yazılır.</p>
     <div class="sec"><h2>Haftalık</h2></div>
     <div class="card" style="padding:0"><ul class="weeks" id="weeks"></ul></div>
     <p class="foot">Bir güne dokunarak kayıtlarını görebilir ve düzeltebilirsin.</p>
     <button class="wide" type="button" id="markOpen">+ İzin, rapor veya resmi tatil ekle</button>
+  </section>
+
+  <!-- NOTES -->
+  <section id="tab-notes" hidden>
+    <div class="card notes-intro">
+      <p class="eyebrow">DIŞ GÖREV NOT DEFTERİ</p>
+      <h2>Canias’a girilecekler</h2>
+      <p>Kaydettiğin dış görev saatleri burada listelenir. Canias’a elle girdikten sonra “Girdim”e dokun; hatırlatma kalkar.</p>
+    </div>
+    <div class="notes-summary"><h3>Bekleyen notlar</h3><b id="notesCount"></b></div>
+    <div class="card notes-paper" id="caniasList" aria-live="polite"></div>
   </section>
 
   <!-- SUMMARY -->
@@ -331,7 +361,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 
 <nav class="tabs" aria-label="Bölümler"><div>
   <button type="button" data-tab="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Bugün</button>
-  <button type="button" data-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Kayıtlar<span class="badge" id="taskBadge" hidden></span></button>
+  <button type="button" data-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Kayıtlar</button>
+  <button type="button" data-tab="notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 9h7M8.5 13h7M8.5 17h4"/></svg>Notlar<span class="badge" id="taskBadge" hidden></span></button>
   <button type="button" data-tab="sum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>Özet<span class="badge" id="sumBadge" hidden></span></button>
   <button type="button" data-tab="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Ayarlar</button>
 </div></nav>
@@ -656,7 +687,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   }
   // ---------- ui state ----------
   let tab = "today", period = "week", viewMonth = null, sheet = null, addOpen = false, addKind = "o";
-  const TITLES = { today:"Bugün", log:"Kayıtlar", sum:"Özet", set:"Ayarlar" };
+  const TITLES = { today:"Bugün", log:"Kayıtlar", notes:"Notlar", sum:"Özet", set:"Ayarlar" };
   const dayX = k => state.days[k] || blank();
   const compactF = ms => { const m = mins(ms), a = Math.abs(m); return (m > 0 ? "+" : m < 0 ? "−" : "") + (a >= 60 ? Math.floor(a/60) + ":" + pad(a % 60) : a); };
   const shortDate = k => dateLabel(k, { day:"numeric", month:"long", weekday:"short" });
@@ -776,17 +807,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   }
   function renderCanias(now){
     const pending = caniasPending(now), done = caniasDays(now).filter(k => !pending.includes(k));
+    $("notesCount").textContent = pending.length + " gün";
     const row = (k, completed) => {
       const x = state.days[k], ready = caniasReady(x, now);
       const times = taskSegs(x).map(s => hm(s.s) + " – " + (s.e == null ? "çıkış eksik" : hm(s.e))).join("<br>");
-      return '<div class="canias-row"><div class="canias-head"><strong>' + dateLabel(k) + '</strong><button type="button" class="canias-btn" data-canias="' + k + '" data-done="' + (completed ? "1" : "0") + '"' + (!completed && !ready ? " disabled" : "") + '>' + (completed ? "Geri al" : "Girdim") + '</button></div><div class="canias-times">' + times + '</div>' + (!completed && !ready ? '<small>Önce dış görev çıkış saatini kaydet.</small>' : "") + '</div>';
+      return '<div class="canias-row"><div class="canias-head"><strong>' + dateLabel(k) + '</strong><button type="button" class="canias-btn" data-canias="' + k + '" data-done="' + (completed ? "1" : "0") + '"' + (!completed && !ready ? " disabled" : "") + '>' + (completed ? "Geri al" : "Girdim") + '</button></div><small>Dış görev saatleri · ' + (completed ? "Canias’a girildi" : "Canias’a gir") + '</small><div class="canias-times">' + times + '</div>' + (!completed && !ready ? '<small>Önce dış görev çıkış saatini kaydet.</small>' : "") + '</div>';
     };
     $("caniasList").innerHTML = (pending.length ? pending.map(k => row(k, false)).join("") : '<p class="canias-empty">Girilecek dış görev kalmadı.</p>') +
       (done.length ? '<details class="canias-done"><summary>Girilenler (' + done.length + ')</summary>' + done.map(k => row(k, true)).join("") + '</details>' : "");
   }
   function renderLog(){
     const now = Date.now(), today = dayKey(now);
-    renderCanias(now);
     if (!viewMonth) viewMonth = today.slice(0, 7);
     const [y, m] = viewMonth.split("-").map(Number);
     $("mTitle").textContent = new Date(y, m - 1, 1).toLocaleDateString("tr-TR", { month:"long", year:"numeric" });
@@ -974,7 +1005,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     $("title").textContent = TITLES[tab];
     $("sub").textContent = tab === "today" ? dateLabel(today) : "";
     $("pill").hidden = tab !== "today";
-    ["today","log","sum","set"].forEach(t => { $("tab-" + t).hidden = t !== tab; });
+    ["today","log","notes","sum","set"].forEach(t => { $("tab-" + t).hidden = t !== tab; });
     document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
     const pend = pendingDays(now).length, miss = missingDays(now).length, tot = pend + miss;
     $("sumBadge").hidden = !tot; $("sumBadge").textContent = tot;
@@ -990,6 +1021,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       $("flow").innerHTML = flowHtml(today, now);
     }
     if (tab === "log") renderLog();
+    if (tab === "notes") renderCanias(now);
     if (tab === "sum") renderSum();
     if (tab === "set") renderSet();
     if (sheet && !focusIn("#sheetBody")) renderSheet();
@@ -1028,7 +1060,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     if (d.edit) { openSheet("day", d.edit === "today" ? todayKey() : d.edit); return; }
     if (d.day) { openSheet("day", d.day); return; }
     if (t.id === "alert") { tab = "sum"; render(); setTimeout(() => { const p = $("pendSec"); if (p) p.scrollIntoView({ behavior:"smooth" }); }, 50); return; }
-    if (t.id === "caniasAlert") { tab = "log"; render(); setTimeout(() => $("caniasList").scrollIntoView({ behavior:"smooth" }), 50); return; }
+    if (t.id === "caniasAlert") { tab = "notes"; render(); setTimeout(() => $("caniasList").scrollIntoView({ behavior:"smooth" }), 50); return; }
     if (t.id === "mPrev" || t.id === "mNext") {
       const [y, m] = viewMonth.split("-").map(Number), dt = new Date(y, m - 1 + (t.id === "mNext" ? 1 : -1), 1);
       viewMonth = dt.getFullYear() + "-" + pad(dt.getMonth() + 1); renderLog(); return;
