@@ -682,6 +682,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     writeDay(k);
     toast((t === "g" ? "Dış görev " : "Ofis girişi ") + hm(now) + " olarak kaydedildi.");
   }
+  // manual break edits: not in the future, no overlap with other breaks (or the running one)
+  function breakError(k, s, e, skip, withOpen){
+    if (e <= s) return "Bitiş başlangıçtan sonra olmalı.";
+    if (e > Date.now()) return "Bitiş şu andan sonra olamaz.";
+    const others = dayX(k).breaks.filter((b, i) => i !== skip);
+    if (withOpen && state.open && dayKey(state.open) === k) others.push({ s:state.open, e:Date.now() });
+    return others.some(b => s < b.e && e > b.s) ? "Başka bir molayla çakışıyor." : "";
+  }
   function endDay(now){
     const k = dayKey(now), d = getDay(k), c = d.segs.find(s => s.e == null);
     if (!c) return;
@@ -689,7 +697,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     toast("Çıkış " + hm(now) + " olarak kaydedildi.");
   }
   // ---------- ui state ----------
-  let tab = "today", period = "week", viewMonth = null, sheet = null, addOpen = false, addKind = "o";
+  let tab = "today", period = "week", viewMonth = null, sheet = null, addOpen = false, addKind = "o", brOpen = false;
   const TITLES = { today:"Bugün", log:"Kayıtlar", notes:"Notlar", sum:"Özet", set:"Ayarlar" };
   const dayX = k => state.days[k] || blank();
   const compactF = ms => { const m = mins(ms), a = Math.abs(m); return (m > 0 ? "+" : m < 0 ? "−" : "") + (a >= 60 ? Math.floor(a/60) + ":" + pad(a % 60) : a); };
@@ -935,7 +943,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   }
 
   // ---------- sheet ----------
-  function openSheet(kind, key){ sheet = { kind, key }; addOpen = false; addKind = "o"; $("sheetBg").hidden = false; document.body.style.overflow = "hidden"; renderSheet(); }
+  function openSheet(kind, key){ sheet = { kind, key }; addOpen = false; addKind = "o"; brOpen = false; $("sheetBg").hidden = false; document.body.style.overflow = "hidden"; renderSheet(); }
   function closeSheet(){ sheet = null; $("sheetBg").hidden = true; document.body.style.overflow = ""; }
   function renderSheet(){
     if (!sheet) return;
@@ -984,11 +992,24 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       h += '<div class="addbar"><button type="button" data-addopen="1">+ Kayıt ekle</button><button type="button" data-fullg="' + k + '">Tüm gün dış görev</button></div>';
     }
 
-    if (x.breaks.length) {
-      h += "<h3>MOLALAR</h3><div class=\"card erows\">" + x.breaks.slice().sort((a, b) => a.s - b.s).map(b => {
+    if (k <= todayKey() || x.breaks.length) {
+      const brs = x.breaks.map((b, i) => ({ b, i })).sort((p, q) => p.b.s - q.b.s).map(({ b, i }) => {
         const c = Math.max(0, bCount(k, x, b, now));
-        return '<div class="er"><span class="dot"></span><span class="k">' + hm(b.s) + " – " + hm(b.e) + ", " + dk(c) + (c < b.e - b.s ? "<small>" + (c ? mins(b.e - b.s - c) + " dk sayılmadı" : "Sayılmadı") + "</small>" : "") +
-          '</span><button class="x" type="button" data-delbr="' + k + '" data-s="' + b.s + '" aria-label="Sil">×</button></div>'; }).join("") + "</div>";
+        return '<div class="er"><span class="dot"></span><span class="k">Mola, ' + dk(c) + (c < b.e - b.s ? "<small>" + (c ? mins(b.e - b.s - c) + " dk sayılmadı" : "Sayılmadı") + "</small>" : "") +
+          '</span><button class="x" type="button" data-delbr="' + k + '" data-s="' + b.s + '" aria-label="Sil">×</button>' +
+          '<div class="times"><input type="time" aria-label="Mola başlangıcı" data-bk="' + k + '" data-bi="' + i + '" data-bf="s" value="' + hm(b.s) + '"><span>–</span>' +
+          '<input type="time" aria-label="Mola bitişi" data-bk="' + k + '" data-bi="' + i + '" data-bf="e" value="' + hm(b.e) + '"></div></div>'; });
+      if (state.open && dayKey(state.open) === k)
+        brs.push('<div class="er"><span class="dot"></span><span class="k">Mola<small>Devam ediyor. Döndüysen dönüş saatini gir.</small></span><span></span>' +
+          '<div class="times"><input type="time" aria-label="Mola başlangıcı" data-of="s" value="' + hm(state.open) + '"><span>–</span>' +
+          '<input type="time" aria-label="Dönüş saati" data-of="e" value=""></div></div>');
+      h += "<h3>MOLALAR</h3><div class=\"card erows\">" + (brs.length ? brs.join("") : '<p class="empty">Mola yok.</p>') + "</div>";
+      if (brOpen) {
+        h += '<div class="card form" style="margin-top:.55rem"><div class="two"><label>Başlangıç<input type="time" id="brS"></label><label>Bitiş<input type="time" id="brE"></label></div>' +
+          '<div class="acts2"><button type="button" data-brcancel="1">Vazgeç</button><button class="pri" type="button" data-brsave="' + k + '">Ekle</button></div></div>';
+      } else if (k <= todayKey()) {
+        h += '<div class="addbar" style="grid-template-columns:1fr"><button type="button" data-bropen="1">+ Mola ekle</button></div>';
+      }
     }
 
     if (!isOff(k, x)) {
@@ -1094,6 +1115,16 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       getDay(k).segs.push({ t:addKind, s:at(k, a), e:at(k, b) }); writeDay(k); addOpen = false;
       renderSheet(); render(); toast((addKind === "g" ? "Dış görev" : "Ofis") + " kaydı eklendi."); return;
     }
+    if (d.bropen) { brOpen = true; renderSheet(); return; }
+    if (d.brcancel) { brOpen = false; renderSheet(); return; }
+    if (d.brsave) {
+      const k = d.brsave, a = hmToM($("brS").value), b = hmToM($("brE").value);
+      if (a == null || b == null) { toast("Başlangıç ve bitiş saatini gir."); return; }
+      const s0 = at(k, a), e0 = at(k, b), err = breakError(k, s0, e0, -1, true);
+      if (err) { toast(err); return; }
+      getDay(k).breaks.push({ s:s0, e:e0 }); writeDay(k); brOpen = false;
+      renderSheet(); render(); toast("Mola " + hm(s0) + " – " + hm(e0) + " eklendi."); return;
+    }
     if (d.fullg) {
       const k = d.fullg; getDay(k).segs.push({ t:"g", s:at(k, S().mesaiS), e:at(k, S().mesaiE) }); writeDay(k);
       renderSheet(); render(); toast("Tüm gün dış görev eklendi."); return;
@@ -1122,6 +1153,33 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       if (sM == null || eM == null) return;
       if (eM <= sM) { toast("Bitiş başlangıçtan sonra olmalı."); render(); return; }
       state.set[g + "S"] = sM; state.set[g + "E"] = eM; writeSettings(); inp.blur(); render(); toast("Ayar kaydedildi."); return;
+    }
+    if (inp.dataset.bf && inp.dataset.bk) {
+      const k = inp.dataset.bk, i = Number(inp.dataset.bi), day = state.days[k]; if (!day || !day.breaks[i]) return;
+      const b = day.breaks[i], m = hmToM(inp.value);
+      if (m == null) { renderSheet(); return; }
+      const s0 = inp.dataset.bf === "s" ? at(k, m) : b.s, e0 = inp.dataset.bf === "e" ? at(k, m) : b.e;
+      const err = breakError(k, s0, e0, i, true);
+      if (err) { toast(err); renderSheet(); return; }
+      b.s = s0; b.e = e0; writeDay(k); inp.blur(); renderSheet(); render(); toast("Mola " + hm(s0) + " – " + hm(e0) + " olarak düzeltildi."); return;
+    }
+    if (inp.dataset.of) {
+      if (!state.open) { renderSheet(); return; }
+      const k = dayKey(state.open), m = hmToM(inp.value);
+      if (m == null) { renderSheet(); return; }
+      const ms = at(k, m);
+      if (inp.dataset.of === "s") {
+        if (ms >= Date.now()) { toast("Başlangıç şu andan sonra olamaz."); renderSheet(); return; }
+        const err = breakError(k, ms, Date.now(), -1, false);
+        if (err) { toast(err); renderSheet(); return; }
+        state.open = ms; writeOpen(); toast("Mola başlangıcı " + hm(ms) + " olarak düzeltildi.");
+      } else {
+        const s0 = fl(state.open), err = breakError(k, s0, ms, -1, false);
+        if (err) { toast(err); renderSheet(); return; }
+        state.open = null; getDay(k).breaks.push({ s:s0, e:ms }); writeDay(k); writeOpen();
+        toast("Mola " + hm(s0) + " – " + hm(ms) + " olarak kaydedildi.");
+      }
+      inp.blur(); renderSheet(); render(); return;
     }
     if (inp.dataset.f && inp.dataset.k) {
       const k = inp.dataset.k, i = Number(inp.dataset.i), day = state.days[k]; if (!day || !day.segs[i]) return;
