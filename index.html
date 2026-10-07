@@ -682,10 +682,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     writeDay(k);
     toast((t === "g" ? "Dış görev " : "Ofis girişi ") + hm(now) + " olarak kaydedildi.");
   }
-  // manual break edits: not in the future, no overlap with other breaks (or the running one)
+  // manual break edits: not in the future, fully inside office records, no overlap with other breaks (or the running one)
   function breakError(k, s, e, skip, withOpen){
     if (e <= s) return "Bitiş başlangıçtan sonra olmalı.";
     if (e > Date.now()) return "Bitiş şu andan sonra olamaz.";
+    const office = merge(resolved(k, dayX(k), Date.now()).filter(z => z.t === "o"));
+    if (subtract([{ s, e }], office).some(g => g.e - g.s >= MIN)) return "Bu saatlerde ofis kaydı yok, mola sadece ofisteyken girilebilir.";
     const others = dayX(k).breaks.filter((b, i) => i !== skip);
     if (withOpen && state.open && dayKey(state.open) === k) others.push({ s:state.open, e:Date.now() });
     return others.some(b => s < b.e && e > b.s) ? "Başka bir molayla çakışıyor." : "";
