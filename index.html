@@ -37,7 +37,7 @@
 [hidden]{display:none !important}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 body{margin:0; background:var(--bg); color:var(--ink); font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; font-variant-numeric:tabular-nums; line-height:1.4; -webkit-tap-highlight-color:transparent}
-main{max-width:30rem; margin:0 auto; padding:1rem 1rem calc(6rem + env(safe-area-inset-bottom,0px))}
+main{max-width:30rem; margin:0 auto; padding:1rem 1rem calc(4.25rem + env(safe-area-inset-bottom,0px))}
 button{font:inherit; color:inherit}
 .plus{color:var(--plus)} .minus{color:var(--minus)}
 .card{background:var(--surface); border:1px solid var(--line); border-radius:20px; padding:1.1rem}
@@ -116,30 +116,55 @@ button{font:inherit; color:inherit}
 .mstats{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin-bottom:.8rem}
 .mstats .tile b,.tiles .tile b{font-size:.98rem; white-space:nowrap}
 @media (max-width:370px){.mstats .tile b,.tiles .tile b{font-size:.82rem; white-space:normal}}
-.cal{padding:.8rem .65rem}
+.cal{padding:.8rem .65rem; box-shadow:0 8px 24px rgba(19,32,58,.04)}
 .dow,.grid{display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px}
 .dow span{text-align:center; font-size:.7rem; font-weight:700; color:var(--muted); padding-bottom:.35rem}
 .cd{position:relative; aspect-ratio:1 / 1.12; border-radius:10px; border:1px solid var(--line); background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.08rem; cursor:pointer; padding:0; overflow:hidden}
 .cd .n{font-size:.86rem; font-weight:800; line-height:1}
 .cd .cf{font-size:.62rem; font-weight:800; line-height:1.1; min-height:.7rem}
 .cd.blank{visibility:hidden}
-.cd.s-pos{background:var(--c-pos); border-color:transparent} .cd.s-pos .cf{color:var(--plus)}
-.cd.s-neg{background:var(--c-neg); border-color:transparent} .cd.s-neg .cf{color:var(--minus)}
-.cd.s-zero .cf{color:var(--muted)}
-.cd.s-open{background:var(--c-open); border:1.5px dashed var(--amber)} .cd.s-open .cf{color:var(--amber-ink)}
-.cd.s-we{background:transparent; border-style:dashed}
+.cd .cf{color:var(--muted)}
+.cd.s-pos{background:var(--c-pos); border-color:var(--plus)}
+.cd.s-pos .cf{color:var(--plus)}
+.cd.s-neg{background:var(--c-neg); border-color:var(--minus)}
+.cd.s-neg .cf{color:var(--minus)}
+.cd.s-open,.cd.s-live{background:repeating-linear-gradient(135deg,var(--surface) 0 6px,var(--c-open) 6px 12px); border:1.5px dashed var(--amber)}
+.cd.s-open .cf,.cd.s-live .cf{color:var(--ink)}
+.cd.s-we{background:transparent}
 .cd.s-future{background:transparent; opacity:.45}
-.cd.t-yillik{background:var(--c-izin); border-color:transparent} .cd.t-yillik .cf{color:var(--c-izin-ink)}
-.cd.t-rapor{background:var(--rap-bg); border-color:transparent} .cd.t-rapor .cf{color:var(--rap)}
-.cd.t-tatil{background:var(--amb-bg); border-color:transparent} .cd.t-tatil .cf{color:var(--c-tatil-ink)}
 .cd.s-plan{opacity:.75}
-.cd.t-tatil.s-pos,.cd.t-yillik.s-pos,.cd.t-rapor.s-pos{box-shadow:inset 0 -3px 0 var(--plus)}
-.cd.t-tatil.s-pos .cf,.cd.t-yillik.s-pos .cf,.cd.t-rapor.s-pos .cf{color:var(--plus)}
 .cd.today{box-shadow:inset 0 0 0 2px var(--ink)}
-.cd .dots{position:absolute; top:4px; right:4px; display:flex; gap:2px}
-.cd .dots i{width:7px; height:7px; border-radius:50%}
-.cd .dots .v{background:var(--minus)} .cd .dots .vk{background:transparent; box-shadow:inset 0 0 0 1.5px var(--minus)}
-.cd .tb{position:absolute; left:5px; right:5px; bottom:3px; height:3px; border-radius:2px; background:var(--task)}
+.cd .flag{position:absolute; top:3px; right:4px; font-size:.55rem; font-weight:800; color:var(--minus)}
+.status-guide{display:flex; flex-wrap:wrap; gap:.35rem .7rem; margin:.65rem .2rem .25rem; font-size:.76rem; color:var(--muted)}
+.status-guide span{display:inline-flex; align-items:center; gap:.3rem}
+.status-guide i{width:.64rem; height:.64rem; border-radius:3px; border:1px solid currentColor}
+.status-guide .good{background:var(--c-pos); color:var(--plus)}
+.status-guide .bad{background:var(--c-neg); color:var(--minus)}
+.status-guide .wait{background:var(--c-open); color:var(--amber)}
+.canias-alert{background:var(--c-open); color:var(--ink); border:1px solid var(--amber)}
+.tabs #taskBadge{background:var(--amber); color:var(--amber-ink)}
+.notes-intro{padding:1.1rem 1.15rem; border-left:4px solid var(--amber); box-shadow:0 8px 24px rgba(19,32,58,.04)}
+.notes-intro .eyebrow{margin:0 0 .15rem; font-size:.7rem; letter-spacing:.09em; font-weight:800; color:var(--muted)}
+.notes-intro h2{margin:0; font-size:1.2rem; letter-spacing:-.02em}
+.notes-intro p:last-child{margin:.35rem 0 0; color:var(--muted); font-size:.85rem}
+.notes-summary{display:flex; justify-content:space-between; align-items:baseline; margin:1.3rem .2rem .55rem}
+.notes-summary h3{margin:0; font-size:.94rem}
+.notes-summary b{font-size:.82rem; color:var(--muted)}
+.notes-paper{padding:.25rem 1.05rem; box-shadow:0 8px 24px rgba(19,32,58,.04)}
+.canias-empty{margin:0; color:var(--muted); font-size:.88rem}
+.canias-row{position:relative; padding:.95rem .05rem .95rem .9rem; border-bottom:1px dashed var(--line)}
+.canias-row::before{content:""; position:absolute; top:1.05rem; bottom:1.05rem; left:0; border-left:3px solid var(--amber); border-radius:3px}
+.canias-row:last-child{border-bottom:0}
+.canias-head{display:flex; justify-content:space-between; align-items:center; gap:.8rem}
+.canias-head strong{font-size:.92rem}
+.canias-row small{display:block; color:var(--muted); font-size:.77rem; margin:.18rem 0 .5rem}
+.canias-times{font-weight:800; font-size:.92rem; line-height:1.65; margin-top:.3rem}
+.canias-btn{flex:none; border:1px solid var(--ink); background:var(--ink); color:var(--surface); border-radius:10px; padding:.55rem .7rem; font-size:.8rem; font-weight:800; cursor:pointer}
+.canias-btn:disabled{opacity:.45; cursor:default}
+.canias-done{margin:.5rem 0; font-size:.82rem; color:var(--muted)}
+.canias-done summary{cursor:pointer; padding:.7rem 0; font-weight:700}
+.canias-done .canias-row::before{border-color:var(--plus)}
+.canias-done .canias-btn{background:transparent; color:var(--ink); border-color:var(--line)}
 .weeks{list-style:none; margin:0; padding:.2rem 1rem}
 .weeks li{display:grid; grid-template-columns:minmax(0,1fr) 4.9rem 2.1rem 5.6rem; gap:.35rem; align-items:center; padding:.6rem 0; border-top:1px solid var(--line); font-size:clamp(.78rem, 1.6vw + .45rem, .88rem)}
 .weeks li:first-child{border-top:0}
@@ -197,12 +222,12 @@ button{font:inherit; color:inherit}
 .bk button{padding:.85rem; border-radius:14px; border:1px solid var(--line); background:var(--surface); font-weight:800; cursor:pointer}
 
 /* bottom nav */
-.tabs{position:fixed; left:0; right:0; bottom:0; z-index:15; background:var(--surface); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom,0px)}
-.tabs div{max-width:30rem; margin:0 auto; display:grid; grid-template-columns:repeat(4,1fr)}
-.tabs button{position:relative; display:flex; flex-direction:column; align-items:center; gap:.15rem; padding:.55rem 0 .5rem; border:0; background:none; font-size:.72rem; font-weight:700; color:var(--muted); cursor:pointer}
-.tabs button.on{color:var(--ink)}
-.tabs svg{width:24px; height:24px}
-.tabs .badge{position:absolute; top:.35rem; left:calc(50% + 6px); min-width:1.05rem; height:1.05rem; padding:0 .25rem; border-radius:999px; background:var(--minus); color:#fff; font-size:.65rem; line-height:1.05rem}
+.tabs{position:fixed; left:0; right:0; bottom:0; z-index:15; background:var(--surface); border-top:1px solid var(--line); box-shadow:0 -6px 22px rgba(19,32,58,.06); padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs div{max-width:30rem; margin:0 auto; padding:.3rem .4rem; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.12rem}
+.tabs button{position:relative; min-width:0; min-height:44px; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:0; padding:.18rem .05rem; border:0; border-radius:11px; background:none; font-size:.68rem; line-height:1.15; white-space:nowrap; letter-spacing:-.01em; font-weight:700; color:var(--muted); cursor:pointer}
+.tabs button.on{background:var(--track); color:var(--ink)}
+.tabs svg{width:19px; height:19px; flex:none}
+.tabs .badge{position:absolute; top:0; left:calc(50% + 7px); min-width:1rem; height:1rem; padding:0 .2rem; border-radius:999px; background:var(--minus); color:#fff; font-size:.62rem; line-height:1rem}
 
 /* sheet */
 .sheet-bg{position:fixed; inset:0; z-index:30; background:rgba(8,12,22,.5); display:flex; align-items:flex-end; justify-content:center}
@@ -255,6 +280,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   <!-- TODAY -->
   <section id="tab-today">
     <button class="alert" id="alert" type="button" hidden><span id="alertText"></span><b>›</b></button>
+    <button class="alert canias-alert" id="caniasAlert" type="button" hidden><span id="caniasAlertText"></span><b>›</b></button>
     <div class="card hero" id="hero" aria-live="polite">
       <p class="hlabel" id="hLabel"></p>
       <p class="hbig" id="hBig"></p>
@@ -276,25 +302,32 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   <section id="tab-log" hidden>
     <div class="mnav"><button type="button" id="mPrev" aria-label="Önceki ay">‹</button><b id="mTitle"></b><button type="button" id="mNext" aria-label="Sonraki ay">›</button></div>
     <div class="mstats" id="mStats"></div>
+    <div class="sec"><h2>Takvim</h2></div>
     <div class="card cal">
       <div class="dow"><span>Pt</span><span>Sa</span><span>Ça</span><span>Pe</span><span>Cu</span><span>Ct</span><span>Pz</span></div>
       <div class="grid" id="cal"></div>
     </div>
-    <div class="legend">
-      <span><i style="background:var(--c-pos)"></i>Artıda</span>
-      <span><i style="background:var(--c-neg)"></i>Eksikte</span>
-      <span><i style="background:var(--c-open);box-shadow:inset 0 0 0 1px var(--amber)"></i>Çıkış eksik</span>
-      <span><i style="background:var(--c-izin)"></i>Yıllık izin</span>
-      <span><i style="background:var(--rap-bg)"></i>Rapor</span>
-      <span><i style="background:var(--amb-bg)"></i>Resmi tatil</span>
-      <span><i style="background:var(--task);height:.25rem;vertical-align:2px"></i>Dış görev</span>
-      <span><i style="background:var(--minus);border-radius:50%"></i>İhlal, izin yok</span>
-      <span><i style="box-shadow:inset 0 0 0 1.5px var(--minus);border-radius:50%"></i>İhlal, izin girildi</span>
+    <div class="status-guide" aria-label="Takvim açıklamaları">
+      <span><i class="good"></i>Yeşil: artı süre</span>
+      <span><i class="bad"></i>Kırmızı: eksik süre</span>
+      <span><i class="wait"></i>Sarı çizgili: açık kayıt</span>
     </div>
+    <p class="foot" style="margin-top:.25rem">! çekirdek saat ihlalini gösterir. İzin ve tatil günleri adıyla yazılır.</p>
     <div class="sec"><h2>Haftalık</h2></div>
     <div class="card" style="padding:0"><ul class="weeks" id="weeks"></ul></div>
     <p class="foot">Bir güne dokunarak kayıtlarını görebilir ve düzeltebilirsin.</p>
     <button class="wide" type="button" id="markOpen">+ İzin, rapor veya resmi tatil ekle</button>
+  </section>
+
+  <!-- NOTES -->
+  <section id="tab-notes" hidden>
+    <div class="card notes-intro">
+      <p class="eyebrow">DIŞ GÖREV NOT DEFTERİ</p>
+      <h2>Canias’a girilecekler</h2>
+      <p>Kaydettiğin dış görev saatleri burada listelenir. Canias’a elle girdikten sonra “Girdim”e dokun; hatırlatma kalkar.</p>
+    </div>
+    <div class="notes-summary"><h3>Bekleyen notlar</h3><b id="notesCount"></b></div>
+    <div class="card notes-paper" id="caniasList" aria-live="polite"></div>
   </section>
 
   <!-- SUMMARY -->
@@ -329,6 +362,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 <nav class="tabs" aria-label="Bölümler"><div>
   <button type="button" data-tab="today" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Bugün</button>
   <button type="button" data-tab="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Kayıtlar</button>
+  <button type="button" data-tab="notes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M8.5 9h7M8.5 13h7M8.5 17h4"/></svg>Notlar<span class="badge" id="taskBadge" hidden></span></button>
   <button type="button" data-tab="sum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>Özet<span class="badge" id="sumBadge" hidden></span></button>
   <button type="button" data-tab="set"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Ayarlar</button>
 </div></nav>
@@ -352,11 +386,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   const TYPES = { normal:"Normal gün", yillik:"Yıllık izin", rapor:"Rapor", tatil:"Resmi tatil" };
   const typeOf = d => (d && TYPES[d.type] && d.type) || "normal";
   const norm = d => {
-    if (Array.isArray(d)) return { segs:[], breaks:d.filter(b => b && num(b.s) && num(b.e)), izin:false, type:"normal" };
+    if (Array.isArray(d)) return { segs:[], breaks:d.filter(b => b && num(b.s) && num(b.e)), izin:false, type:"normal", caniasConfirmed:"" };
     d = d || {};
     let segs = Array.isArray(d.segs) ? d.segs.filter(s => s && num(s.s) && (s.e == null || num(s.e))).map(s => ({ t: s.t === "g" ? "g" : "o", s:s.s, e: num(s.e) ? s.e : null })) : [];
     if (!Array.isArray(d.segs) && num(d.in)) segs = [{ t:"o", s:d.in, e: num(d.out) ? d.out : null }];
-    const out = { segs, breaks: Array.isArray(d.breaks) ? d.breaks.filter(b => b && num(b.s) && num(b.e) && b.e >= b.s) : [], izin: !!d.izin, type: typeOf(d) };
+    const out = { segs, breaks: Array.isArray(d.breaks) ? d.breaks.filter(b => b && num(b.s) && num(b.e) && b.e >= b.s) : [], izin: !!d.izin, type: typeOf(d), caniasConfirmed: typeof d.caniasConfirmed === "string" ? d.caniasConfirmed : "" };
     if (DEMO && typeof d.note === "string") out.note = d.note;
     return out;
   };
@@ -462,9 +496,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   function writeDay(key){
     const d = state.days[key];
     if (d) d.segs.sort((a,b) => a.s - b.s);
+    if (d && !taskSegs(d).length) d.caniasConfirmed = "";
     if (isEmpty(d)) delete state.days[key];
     saveLocal();
-    const body = isEmpty(d) ? null : { date:key, segs:d.segs.map(s => ({ ...s })), breaks:d.breaks.map(b => ({ ...b })), izin:d.izin, type:typeOf(d) };
+    const body = isEmpty(d) ? null : { date:key, segs:d.segs.map(s => ({ ...s })), breaks:d.breaks.map(b => ({ ...b })), izin:d.izin, type:typeOf(d), caniasConfirmed:d.caniasConfirmed || "" };
     enqueue(() => { const ref = db.doc("data/users/" + uid + "/d-" + key); return body ? ref.set(body) : ref.delete(); });
   }
   function writeOpen(){ saveLocal(); const open = state.open; enqueue(() => db.doc("data/users/" + uid + "/state").set({ open })); }
@@ -519,6 +554,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   const isWE = k => { const g = new Date(keyStart(k)).getDay(); return g === 0 || g === 6; };
   const todayKey = () => dayKey(Date.now());
 
+  // Confirmation follows the exact outside-duty hours; edits reopen the reminder.
+  const taskSegs = d => d.segs.filter(s => s.t === "g").slice().sort((a,b) => a.s - b.s || (a.e || 0) - (b.e || 0));
+  const taskSignature = d => taskSegs(d).map(s => hm(s.s) + "-" + (s.e == null ? "" : hm(s.e))).join("|");
+  const caniasReady = (d, now) => taskSegs(d).every(s => s.e != null && s.e <= now);
+  const caniasDays = now => Object.keys(state.days).filter(k => k <= dayKey(now) && taskSegs(state.days[k]).length).sort().reverse();
+  const caniasPending = now => caniasDays(now).filter(k => state.days[k].caniasConfirmed !== taskSignature(state.days[k]));
+
   // ---------- interval helpers ----------
   const merge = list => {
     const a = list.filter(x => x.e > x.s).map(x => ({ s:x.s, e:x.e })).sort((x,y) => x.s - y.s), out = [];
@@ -541,7 +583,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   const lunchOn = () => S().lunchS != null && S().lunchE != null && S().lunchE > S().lunchS;
   const lunchWin = k => lunchOn() && !isWE(k) ? [{ s:at(k, S().lunchS), e:at(k, S().lunchE) }] : [];   // no lunch deduction on weekends
   const lunchLen = () => lunchOn() ? (S().lunchE - S().lunchS) * MIN : 0;
-  const blank = () => ({ segs:[], breaks:[], izin:false, type:"normal" });
+  const blank = () => ({ segs:[], breaks:[], izin:false, type:"normal", caniasConfirmed:"" });
   const isOff = (k, x) => isWE(k) || typeOf(x) !== "normal";
   const offLabel = (k, x) => typeOf(x) !== "normal" ? TYPES[typeOf(x)] : (isWE(k) ? "Hafta sonu" : "");
   const targetNet = (k, x) => isOff(k, x) ? 0 : (S().mesaiE - S().mesaiS) * MIN - lunchLen();
@@ -645,7 +687,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   }
   // ---------- ui state ----------
   let tab = "today", period = "week", viewMonth = null, sheet = null, addOpen = false, addKind = "o";
-  const TITLES = { today:"Bugün", log:"Kayıtlar", sum:"Özet", set:"Ayarlar" };
+  const TITLES = { today:"Bugün", log:"Kayıtlar", notes:"Notlar", sum:"Özet", set:"Ayarlar" };
   const dayX = k => state.days[k] || blank();
   const compactF = ms => { const m = mins(ms), a = Math.abs(m); return (m > 0 ? "+" : m < 0 ? "−" : "") + (a >= 60 ? Math.floor(a/60) + ":" + pad(a % 60) : a); };
   const shortDate = k => dateLabel(k, { day:"numeric", month:"long", weekday:"short" });
@@ -763,6 +805,17 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     else st = "missing";
     return { st, f, vv, t, task: x.segs.some(s => s.t === "g") };
   }
+  function renderCanias(now){
+    const pending = caniasPending(now), done = caniasDays(now).filter(k => !pending.includes(k));
+    $("notesCount").textContent = pending.length + " gün";
+    const row = (k, completed) => {
+      const x = state.days[k], ready = caniasReady(x, now);
+      const times = taskSegs(x).map(s => hm(s.s) + " – " + (s.e == null ? "çıkış eksik" : hm(s.e))).join("<br>");
+      return '<div class="canias-row"><div class="canias-head"><strong>' + dateLabel(k) + '</strong><button type="button" class="canias-btn" data-canias="' + k + '" data-done="' + (completed ? "1" : "0") + '"' + (!completed && !ready ? " disabled" : "") + '>' + (completed ? "Geri al" : "Girdim") + '</button></div><small>Dış görev saatleri · ' + (completed ? "Canias’a girildi" : "Canias’a gir") + '</small><div class="canias-times">' + times + '</div>' + (!completed && !ready ? '<small>Önce dış görev çıkış saatini kaydet.</small>' : "") + '</div>';
+    };
+    $("caniasList").innerHTML = (pending.length ? pending.map(k => row(k, false)).join("") : '<p class="canias-empty">Girilecek dış görev kalmadı.</p>') +
+      (done.length ? '<details class="canias-done"><summary>Girilenler (' + done.length + ')</summary>' + done.map(k => row(k, true)).join("") + '</details>' : "");
+  }
   function renderLog(){
     const now = Date.now(), today = dayKey(now);
     if (!viewMonth) viewMonth = today.slice(0, 7);
@@ -775,7 +828,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     for (let d = 1; d <= days; d++) {
       const k = y + "-" + pad(m) + "-" + pad(d), x = dayX(k), ds = dayStatus(k, x, now);
       const c = ["cd", "s-" + ds.st];
-      if (ds.t !== "normal") c.push("t-" + ds.t);
       if (isWE(k)) c.push("we");
       if (k === today) c.push("today");
       let txt = "";
@@ -785,9 +837,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       else if (ds.st === "off" || ds.st === "plan") txt = TL[ds.t];
       if (k <= today) mb += breakSum(k, x, now);
       mv += ds.vv.length;
-      const vDot = ds.vv.length ? '<i class="' + (x.izin ? "vk" : "v") + '"></i>' : "";
-      h += '<button type="button" class="' + c.join(" ") + '" data-day="' + k + '" aria-label="' + dateLabel(k) + '"><span class="n">' + d + '</span><span class="cf">' + txt + "</span>" +
-        (vDot ? '<span class="dots">' + vDot + "</span>" : "") + (ds.task ? '<span class="tb"></span>' : "") + "</button>";
+      const flag = ds.vv.length ? '<span class="flag" aria-hidden="true">!</span>' : "";
+      h += '<button type="button" class="' + c.join(" ") + '" data-day="' + k + '" aria-label="' + dateLabel(k) + (ds.vv.length ? ', çekirdek saat ihlali' : "") + '"><span class="n">' + d + '</span><span class="cf">' + txt + "</span>" + flag + "</button>";
     }
     $("cal").innerHTML = h;
     $("mStats").innerHTML =
@@ -954,10 +1005,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     $("title").textContent = TITLES[tab];
     $("sub").textContent = tab === "today" ? dateLabel(today) : "";
     $("pill").hidden = tab !== "today";
-    ["today","log","sum","set"].forEach(t => { $("tab-" + t).hidden = t !== tab; });
+    ["today","log","notes","sum","set"].forEach(t => { $("tab-" + t).hidden = t !== tab; });
     document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
     const pend = pendingDays(now).length, miss = missingDays(now).length, tot = pend + miss;
     $("sumBadge").hidden = !tot; $("sumBadge").textContent = tot;
+    const taskCount = caniasPending(now).length;
+    $("taskBadge").hidden = !taskCount; $("taskBadge").textContent = taskCount;
+    $("caniasAlert").hidden = !taskCount;
+    $("caniasAlertText").textContent = taskCount + " dış görev günü Canias’a girilmeyi bekliyor";
     $("alert").hidden = !tot;
     $("alertText").textContent = [pend ? pend + " günde izin girilmemiş ihlal" : "", miss ? miss + " günde çıkış kaydı eksik" : ""].filter(Boolean).join(", ");
     if (tab === "today") {
@@ -966,6 +1021,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       $("flow").innerHTML = flowHtml(today, now);
     }
     if (tab === "log") renderLog();
+    if (tab === "notes") renderCanias(now);
     if (tab === "sum") renderSum();
     if (tab === "set") renderSet();
     if (sheet && !focusIn("#sheetBody")) renderSheet();
@@ -979,6 +1035,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     const now = Date.now(), d = t.dataset;
 
     if (d.tab) { tab = d.tab; window.scrollTo(0, 0); render(); return; }
+    if (d.canias) {
+      const x = state.days[d.canias]; if (!x || !taskSegs(x).length) return;
+      if (d.done !== "1" && (!caniasReady(x, now) || d.canias > dayKey(now))) return;
+      x.caniasConfirmed = d.done === "1" ? "" : taskSignature(x);
+      writeDay(d.canias); render(); toast(d.done === "1" ? "Canias hatırlatması geri geldi." : "Canias’a girildi olarak işaretlendi."); return;
+    }
     if (d.act) {
       if (d.act === "end" && needsConfirm(now)) {
         const first = d.armed !== "1";
@@ -998,6 +1060,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     if (d.edit) { openSheet("day", d.edit === "today" ? todayKey() : d.edit); return; }
     if (d.day) { openSheet("day", d.day); return; }
     if (t.id === "alert") { tab = "sum"; render(); setTimeout(() => { const p = $("pendSec"); if (p) p.scrollIntoView({ behavior:"smooth" }); }, 50); return; }
+    if (t.id === "caniasAlert") { tab = "notes"; render(); setTimeout(() => $("caniasList").scrollIntoView({ behavior:"smooth" }), 50); return; }
     if (t.id === "mPrev" || t.id === "mNext") {
       const [y, m] = viewMonth.split("-").map(Number), dt = new Date(y, m - 1 + (t.id === "mNext" ? 1 : -1), 1);
       viewMonth = dt.getFullYear() + "-" + pad(dt.getMonth() + 1); renderLog(); return;
@@ -1079,14 +1142,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   $("export").addEventListener("click", async () => {
     const now = Date.now(), keys = Object.keys(state.days).sort(), c = n => n.toFixed(0);
     const list = (x, t) => x.segs.filter(s => s.t === t).sort((a, b) => a.s - b.s).map(s => hm(s.s) + "-" + (s.e != null ? hm(s.e) : "")).join(" | ");
-    const lines = ["Tarih;Gün;Gün türü;Ofis;Dış görev;Net çalışılan (dk);Fark (dk);Mola sayısı;Mola (dk);Çekirdek ihlal sayısı;Çekirdek ihlal (dk);Mazeret izni"];
+    const lines = ["Tarih;Gün;Gün türü;Ofis;Dış görev;Net çalışılan (dk);Fark (dk);Mola sayısı;Mola (dk);Çekirdek ihlal sayısı;Çekirdek ihlal (dk);Mazeret izni;Canias’a girildi"];
     let fT = 0, bT = 0, vT = 0, vN = 0;
     keys.forEach(k => {
       const x = state.days[k], bs = breakSum(k, x, now) / MIN; bT += bs;
       let w = "", f = "";
       if (complete(x)) { w = c(netWork(k, x, now) / MIN); const fm = dayFark(k, x, now) / MIN; f = c(fm); fT += fm; }
       const vv = violations(k, x, now), vm = vv.reduce((t, g) => t + g.e - g.s, 0) / MIN; vT += vm; vN += vv.length;
-      lines.push([k, new Date(keyStart(k)).toLocaleDateString("tr-TR", { weekday:"long" }), typeOf(x) === "normal" ? "" : TYPES[typeOf(x)], list(x, "o"), list(x, "g"), w, f, x.breaks.length, c(bs), vv.length, c(vm), x.izin ? "Evet" : ""].join(";"));
+      lines.push([k, new Date(keyStart(k)).toLocaleDateString("tr-TR", { weekday:"long" }), typeOf(x) === "normal" ? "" : TYPES[typeOf(x)], list(x, "o"), list(x, "g"), w, f, x.breaks.length, c(bs), vv.length, c(vm), x.izin ? "Evet" : "", taskSegs(x).length && x.caniasConfirmed === taskSignature(x) ? "Evet" : ""].join(";"));
     });
     lines.push(["Toplam", "", "", "", "", "", c(fT), "", c(bT), vN, c(vT), ""].join(";"));
     lines.push("", "Molalar", "Tarih;Çıkış;Giriş;Süre (dk);Sayılan (dk)");
@@ -1125,6 +1188,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
         segs.forEach(s => { if (!has(s)) d.segs.push(s); });
         if (idx["Gün türü"] != null) { const lbl = (c[idx["Gün türü"]] || "").trim(); const t = Object.keys(TYPES).find(z => TYPES[z] === lbl); if (t && t !== "normal") d.type = t; }
         if (idx["Mazeret izni"] != null && (c[idx["Mazeret izni"]] || "").trim() === "Evet") d.izin = true;
+        if (idx["Canias’a girildi"] != null && (c[idx["Canias’a girildi"]] || "").trim() === "Evet") {
+          const imported = parseList(k, c[idx["Dış görev"]], "g");
+          if (imported.length && taskSignature({ segs:imported }) === taskSignature(d)) d.caniasConfirmed = taskSignature(d);
+        }
       } else if (section === "breaks") {
         const s0 = toMs(k, c[1]), e0 = toMs(k, c[2]);
         if (s0 != null && e0 != null && e0 >= s0 && !d.breaks.some(b => Math.abs(b.s - s0) < MIN)) d.breaks.push({ s:s0, e:e0 });
