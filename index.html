@@ -7,14 +7,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mesai">
-<title>Mesai ve Mola Takip</title>
+<title>Mesai Takip</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#EEF1F5; --surface:#FFFFFF; --ink:#13203A; --muted:#66748A; --line:#DCE2EA; --track:#E6EAF0;
-  --amber:#F2A541; --amber-ink:#3B2300; --plus:#1F7A4A; --minus:#C0392B;
+  --amber:#F2A541; --amber-ink:#3B2300; --plus:#1F7A4A; --minus:#C0392B; --task:#2F6FD6;
+  --warn-bg:#FDECEA; --info-bg:#EAF1FC; --amb-bg:#FFF3E0;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
@@ -23,135 +24,161 @@
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
     --bg:#0C1322; --surface:#151F33; --ink:#E8EDF5; --muted:#8E9BB0; --line:#26324A; --track:#1E2A40;
-    --amber:#F2A541; --amber-ink:#2A1800; --plus:#5DD39A; --minus:#FF8A7A; color-scheme:dark;
+    --amber:#F2A541; --amber-ink:#2A1800; --plus:#5DD39A; --minus:#FF8A7A; --task:#6EA3FF;
+    --warn-bg:#3A1C1C; --info-bg:#16284A; --amb-bg:#3A2A12; color-scheme:dark;
   }
 }
 :root[data-theme="dark"]{
   --bg:#0C1322; --surface:#151F33; --ink:#E8EDF5; --muted:#8E9BB0; --line:#26324A; --track:#1E2A40;
-  --amber:#F2A541; --amber-ink:#2A1800; --plus:#5DD39A; --minus:#FF8A7A; color-scheme:dark;
+  --amber:#F2A541; --amber-ink:#2A1800; --plus:#5DD39A; --minus:#FF8A7A; --task:#6EA3FF;
+  --warn-bg:#3A1C1C; --info-bg:#16284A; --amb-bg:#3A2A12; color-scheme:dark;
 }
-*,*::before,*::after{box-sizing:inherit}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none !important}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{
-  margin:0; background:var(--bg); color:var(--ink);
-  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  font-variant-numeric:tabular-nums; line-height:1.4;
-  -webkit-tap-highlight-color:transparent;
-}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; font-variant-numeric:tabular-nums; line-height:1.4; -webkit-tap-highlight-color:transparent}
 main{max-width:30rem; margin:0 auto; padding:1.1rem 1rem 3rem}
 .plus{color:var(--plus)} .minus{color:var(--minus)}
 .card{background:var(--surface); border:1px solid var(--line); border-radius:22px; padding:1.15rem}
 h2{font-size:.95rem; font-weight:700; margin:1.9rem .25rem .6rem}
+h3{font-size:.8rem; font-weight:700; color:var(--muted); margin:1rem 0 .3rem; text-transform:none}
 
-/* header */
 .top{display:flex; justify-content:space-between; align-items:center; gap:1rem; margin:0 .25rem 1rem}
 .top h1{margin:0; font-size:1.35rem; font-weight:800; letter-spacing:-.01em}
 .top p{margin:.1rem 0 0; color:var(--muted); font-size:.9rem}
 .pill{flex:none; display:inline-flex; align-items:center; gap:.45rem; padding:.4rem .75rem; border-radius:999px; font-size:.85rem; font-weight:700; background:var(--surface); border:1px solid var(--line)}
 .pill i{width:.55rem; height:.55rem; border-radius:50%; background:var(--muted)}
-.pill.work i{background:var(--plus)} .pill.break i{background:var(--amber)} .pill.done i{background:var(--ink)}
+.pill.o i{background:var(--plus)} .pill.g i{background:var(--task)} .pill.b i{background:var(--amber)} .pill.done i{background:var(--ink)}
 
-/* today */
-.io{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1rem; align-items:end}
-.field{min-width:0}
-.field input::-webkit-calendar-picker-indicator{opacity:.45}
-.diffrow{display:flex; justify-content:space-between; align-items:baseline; gap:1rem; margin-top:1.1rem}
-.diffrow .lbl{font-size:.85rem; font-weight:600; color:var(--muted)}
-.field label,.field .lbl{display:block; font-size:.78rem; font-weight:600; color:var(--muted); margin:0 0 .2rem}
-.field input{
-  width:100%; font:inherit; font-size:1.55rem; font-weight:800; color:var(--ink); letter-spacing:-.01em;
-  background:transparent; border:0; border-bottom:2px solid var(--line); border-radius:0; padding:.1rem 0 .2rem; min-height:2.6rem;
-}
-.field input:focus{border-bottom-color:var(--ink); outline:none}
-.diff{font-size:1.6rem; font-weight:800; white-space:nowrap; letter-spacing:-.01em}
+.alert{display:block; width:100%; text-align:left; font:inherit; margin:0 0 .75rem; padding:.75rem .9rem; border-radius:14px; background:var(--warn-bg); color:var(--minus); font-weight:600; font-size:.9rem; border:0}
 
-.tl{margin:.6rem 0 .35rem}
-.bar{position:relative; height:14px; border-radius:7px; background:var(--track); overflow:hidden}
-.bar .w{position:absolute; top:0; bottom:0; background:var(--ink); border-radius:7px}
-.bar .b{position:absolute; top:0; bottom:0; background:var(--amber)}
-.bar .t{position:absolute; top:-3px; bottom:-3px; width:2px; background:var(--plus)}
-.tlab{position:relative; height:1.1rem; margin-top:.3rem; font-size:.75rem; color:var(--muted)}
-.tlab span{position:absolute; white-space:nowrap}
-.mini .bar{height:8px; border-radius:4px}
-.mini .bar .w{border-radius:4px}
-.mini .bar .t{top:-2px; bottom:-2px}
+.stats{display:grid; grid-template-columns:1fr 1fr 1.3fr; gap:.5rem}
+.stats span{display:block; font-size:.78rem; font-weight:600; color:var(--muted)}
+.stats b{display:block; font-size:1.45rem; font-weight:800; letter-spacing:-.01em; white-space:nowrap}
+.stats .r{text-align:right}
 
-.worked{margin:.35rem 0 0; font-size:.9rem; color:var(--muted)}
-.btn{
-  display:block; width:100%; margin-top:1.1rem; padding:1.05rem 1rem;
-  font:inherit; font-size:1.1rem; font-weight:800; border:0; border-radius:16px; cursor:pointer;
-  background:var(--ink); color:var(--surface);
-}
-.btn.ghost{background:transparent; color:var(--ink); box-shadow:inset 0 0 0 2px var(--ink)}
+.tl{margin:1rem 0 .3rem}
+.bar{position:relative; height:16px; border-radius:8px; background:var(--track); overflow:hidden}
+.bar > div{position:absolute; top:0; bottom:0}
+.bar .o{background:var(--ink)} .bar .g{background:var(--task)} .bar .b{background:var(--amber)}
+.bar .l{background:repeating-linear-gradient(45deg,var(--track) 0 3px,var(--line) 3px 6px)}
+.bar .v{top:auto; height:5px; background:var(--minus)}
+.bar .k{width:2px; background:var(--muted); opacity:.7}
+.bar .t{width:2px; background:var(--plus)}
+.tlab{display:flex; justify-content:space-between; margin-top:.3rem; font-size:.75rem; color:var(--muted)}
+.mini .bar{height:9px; border-radius:5px}
+.mini .bar .v{height:3px}
+.legend{display:flex; flex-wrap:wrap; gap:.35rem .8rem; margin-top:.45rem; font-size:.75rem; color:var(--muted)}
+.legend i{display:inline-block; width:.6rem; height:.6rem; border-radius:3px; margin-right:.3rem; vertical-align:-1px}
+
+.worked{margin:.5rem 0 0; font-size:.9rem; color:var(--muted)}
+.warn{margin:.8rem 0 0; padding:.7rem .85rem; border-radius:12px; font-size:.9rem; font-weight:600}
+.warn.red{background:var(--warn-bg); color:var(--minus)}
+.warn.amb{background:var(--amb-bg); color:var(--ink)}
+.warn.info{background:var(--info-bg); color:var(--ink)}
+.warn button{display:block; margin-top:.5rem; font:inherit; font-size:.85rem; font-weight:700; padding:.45rem .7rem; border-radius:10px; border:1px solid currentColor; background:transparent; color:inherit; cursor:pointer}
+
+.btn{display:block; width:100%; margin-top:1rem; padding:1rem; font:inherit; font-size:1.08rem; font-weight:800; border:0; border-radius:16px; cursor:pointer; background:var(--ink); color:var(--surface)}
+.btn.ghost{background:transparent; color:var(--ink); box-shadow:inset 0 0 0 2px var(--line); margin-top:.5rem; font-size:1rem; padding:.85rem}
+.btn.task{background:var(--task); color:#fff}
+.btn.armed{background:var(--minus); color:#fff; box-shadow:none}
 .btn:active{transform:scale(.985)}
+.btn:disabled{opacity:.45; cursor:default}
 
-/* break */
 .brk{margin-top:.75rem; transition:background .25s,border-color .25s}
 .brk .row{display:flex; justify-content:space-between; align-items:center; gap:1rem}
 .brk .lbl{margin:0; font-size:.85rem; color:var(--muted); font-weight:600}
-.brk .big{margin:.1rem 0 0; font-size:1.6rem; font-weight:800; letter-spacing:-.01em}
-.brk .go{flex:none; width:auto; margin:0; padding:.95rem 1.2rem; background:var(--amber); color:var(--amber-ink); font-size:1rem}
+.brk .big{margin:.1rem 0 0; font-size:1.6rem; font-weight:800}
+.brk .go{flex:none; width:auto; margin:0; padding:.9rem 1.15rem; background:var(--amber); color:var(--amber-ink); font-size:1rem}
+.brk .hint{margin:.5rem 0 0; font-size:.82rem; color:var(--muted)}
 .brk.out{background:var(--amber); border-color:var(--amber); color:var(--amber-ink)}
 .brk.out .lbl{color:var(--amber-ink); opacity:.8}
 .timer{font-size:3rem; font-weight:800; letter-spacing:-.02em; line-height:1.05; margin:.25rem 0 0}
 .brk.out .btn{background:var(--amber-ink); color:var(--amber)}
-.link{display:block; margin:.7rem auto 0; background:none; border:0; padding:.3rem; font:inherit; font-size:.9rem; color:inherit; text-decoration:underline; cursor:pointer; opacity:.85}
-.link.armed{font-weight:800; text-decoration:none; opacity:1}
+.link{display:block; margin:.7rem auto 0; background:none; border:0; padding:.3rem; font:inherit; font-size:.9rem; color:inherit; text-decoration:underline; cursor:pointer}
+.link.armed{font-weight:800; text-decoration:none}
 
-/* summary */
 .sum{padding:.4rem 1.15rem}
 .sum table{width:100%; border-collapse:collapse}
-.sum th,.sum td{padding:.7rem 0 .7rem .5rem; text-align:right; font-weight:800; font-size:.98rem}
+.sum th,.sum td{padding:.65rem 0 .65rem .4rem; text-align:right; font-weight:800; font-size:.9rem; vertical-align:top; white-space:nowrap}
+.sum td small{display:block; font-size:.75rem; font-weight:600; color:var(--muted)}
 .sum thead th{font-size:.78rem; font-weight:600; color:var(--muted); padding:.55rem 0 .2rem}
-.sum tbody th{text-align:left; font-size:.9rem; font-weight:600; color:var(--muted)}
+.sum tbody th{text-align:left; font-size:.9rem; font-weight:600; color:var(--muted); padding-left:0}
 .sum tbody tr + tr th,.sum tbody tr + tr td{border-top:1px solid var(--line)}
 .foot{font-size:.78rem; color:var(--muted); margin:.5rem .25rem 0}
 
-/* lists */
-.rows{list-style:none; margin:0; padding:0}
-.rows li{display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:.75rem; padding:.7rem 0; border-top:1px solid var(--line)}
-.rows li:first-child{border-top:0}
-.dot{width:.55rem; height:.55rem; border-radius:50%; background:var(--amber)}
-.range{font-size:1.02rem; font-weight:600}
+/* day editor */
+.ed{padding:.35rem 1.15rem .9rem; min-width:0}
+.ed *{min-width:0}
+.list{list-style:none; margin:0; padding:0}
+.list li{display:grid; align-items:center; gap:.5rem; padding:.55rem 0; border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
+.seg{grid-template-columns:auto 1fr auto}
+.times{grid-column:1 / -1; display:flex; align-items:center; gap:.4rem}
+.times input{flex:1 1 0;}
+.seg input{width:100%; min-width:0; font:inherit; font-size:1rem; font-weight:700; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:.35rem .3rem; text-align:center}
+.seg .sep{color:var(--muted)}
+.kind{font-size:.85rem; font-weight:700}
+.dot{width:.6rem; height:.6rem; border-radius:50%; background:var(--amber)}
+.dot.o{background:var(--ink)} .dot.g{background:var(--task)} .dot.v{background:var(--minus)}
+.brow{grid-template-columns:auto 1fr auto auto}
+.range{font-size:1rem; font-weight:600}
 .dur{font-weight:700}
-.del{background:none; border:1px solid var(--line); color:var(--muted); border-radius:10px; padding:.35rem .6rem; font:inherit; font-size:.8rem; cursor:pointer}
+.ln{display:block; font-size:.75rem; font-weight:500; color:var(--muted)}
+.del{background:none; border:1px solid var(--line); color:var(--muted); border-radius:10px; padding:.35rem .55rem; font:inherit; font-size:.78rem; cursor:pointer; white-space:nowrap}
 .del.armed{background:var(--minus); color:#fff; border-color:var(--minus)}
-.listcard{padding:.35rem 1.15rem}
-.empty{color:var(--muted); margin:0; padding:.65rem 0}
-
-details.card{margin-bottom:.55rem; padding:0; overflow:hidden}
-summary{display:block; padding:.95rem 1.15rem; cursor:pointer; list-style:none}
-summary::-webkit-details-marker{display:none}
-.sh{display:flex; justify-content:space-between; gap:1rem}
-.sh .d{font-weight:700}
-.sh .f{font-weight:800; white-space:nowrap}
-.sm{display:flex; justify-content:space-between; gap:1rem; font-size:.85rem; color:var(--muted); margin-top:.15rem}
-.mini{margin-top:.6rem}
-.pastbody{border-top:1px solid var(--line); padding:.8rem 1.15rem .5rem}
-.pastbody .io{grid-template-columns:1fr 1fr; margin-bottom:.4rem}
-.pastbody .field input{font-size:1.25rem}
+.vrow{grid-template-columns:auto 1fr auto}
+.add{display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); gap:.4rem; align-items:center; margin-top:.75rem}
+.add select{grid-column:1 / -1}
+.add select,.add input{width:100%; min-width:0; font:inherit; font-size:.95rem; font-weight:600; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:.45rem .35rem}
+.add .sep{color:var(--muted); text-align:center}
+.addbtns{display:flex; gap:.5rem; margin-top:.5rem}
+.addbtns button{flex:1; font:inherit; font-weight:700; font-size:.9rem; padding:.6rem; border-radius:12px; cursor:pointer; border:1px solid var(--line); background:var(--surface); color:var(--ink)}
+.addbtns .pri{background:var(--ink); color:var(--surface); border-color:var(--ink)}
+.izin{display:block; width:100%; margin-top:.6rem; font:inherit; font-weight:700; font-size:.9rem; padding:.65rem; border-radius:12px; cursor:pointer; border:1px solid var(--minus); background:transparent; color:var(--minus)}
+.izin.on{border-color:var(--plus); color:var(--plus)}
+.empty{color:var(--muted); margin:0; padding:.5rem 0; font-size:.9rem}
 
 .mh{display:flex; justify-content:space-between; align-items:baseline; gap:1rem; margin:1.1rem .25rem .5rem}
 .mh b{font-size:.95rem; font-weight:800}
-.mh span{font-size:.85rem; color:var(--muted); text-align:right}
-.mh .plus,.mh .minus{font-weight:700}
-.export.ghost{background:transparent}
-.settings{padding:.3rem 1.15rem}
-.srow{display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.7rem 0}
-.srow + .srow{border-top:1px solid var(--line)}
-.srow .pair{display:flex; align-items:center; gap:.4rem; color:var(--muted)}
-.settings input[type=time]{width:6.4rem; text-align:center; font-size:1.05rem; padding:.45rem .3rem}
-.srow label{flex:1; min-width:0}
-.bar .l{position:absolute; top:0; bottom:0; background:repeating-linear-gradient(45deg,var(--track) 0 3px,var(--line) 3px 6px)}
-.ln{display:block; font-size:.75rem; font-weight:500; color:var(--muted)}
-.settings label{font-weight:600}
-.settings input{width:5.5rem; font:inherit; font-size:1.15rem; font-weight:800; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:.45rem .6rem; text-align:right}
-.export{display:block; width:100%; margin-top:.75rem; padding:.9rem; font:inherit; font-weight:700; background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:16px; cursor:pointer}
-.note{font-size:.8rem; color:var(--muted); margin:1rem 0 0; text-align:center}
-.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(1rem + env(safe-area-inset-bottom,0px)); max-width:calc(100% - 2rem);
-  background:var(--ink); color:var(--surface); padding:.75rem 1rem; border-radius:14px; font-weight:600; font-size:.95rem; z-index:10}
+.mh span{font-size:.82rem; color:var(--muted); text-align:right}
+details.card{margin-bottom:.55rem; padding:0; overflow:hidden}
+summary{display:block; padding:.9rem 1.15rem; cursor:pointer; list-style:none}
+summary::-webkit-details-marker{display:none}
+.sh,.sm{display:flex; justify-content:space-between; gap:1rem}
+.sh .d{font-weight:700}
+.sh .f{font-weight:800; white-space:nowrap}
+.sm{font-size:.83rem; color:var(--muted); margin-top:.15rem}
+.tags{display:flex; gap:.35rem; flex-wrap:wrap; margin-top:.4rem}
+.tag{font-size:.72rem; font-weight:700; padding:.15rem .5rem; border-radius:999px; background:var(--track); color:var(--muted)}
+.tag.g{background:var(--info-bg); color:var(--task)}
+.tag.v{background:var(--warn-bg); color:var(--minus)}
+.tag.ok{background:var(--track); color:var(--plus)}
+.tag.we{background:var(--amb-bg); color:var(--ink)}
+.mini{margin-top:.55rem}
+details .ed{border-top:1px solid var(--line); padding-top:.5rem}
 
-.btn:focus-visible,.link:focus-visible,.del:focus-visible,summary:focus-visible,.export:focus-visible,.settings input:focus-visible{outline:3px solid var(--muted); outline-offset:2px}
+.dtype{display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin:.5rem 0 .2rem}
+.dtype label{font-weight:700; font-size:.9rem}
+.dtype select,.mark input,.mark select{font:inherit; font-size:.95rem; font-weight:600; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:.45rem .5rem}
+.mark{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:.6rem; margin-top:.6rem}
+.mark label{display:flex; flex-direction:column; gap:.25rem; font-size:.78rem; font-weight:600; color:var(--muted)}
+.mark .full{grid-column:1 / -1}
+.mark input,.mark select{width:100%}
+.tag.t-yillik{background:#E3F4EA; color:#1F7A4A} .tag.t-rapor{background:#F3E8FB; color:#7B3FA8} .tag.t-tatil{background:var(--amb-bg); color:var(--ink)}
+.dot.t-yillik{background:#1F7A4A} .dot.t-rapor{background:#7B3FA8} .dot.t-tatil{background:var(--amber)}
+.demo{margin:0 0 .75rem; padding:.6rem .85rem; border-radius:12px; background:var(--info-bg); font-size:.85rem; font-weight:600}
+.settings{padding:.3rem 1.15rem}
+.srow{display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.7rem 0}
+.srow + .srow{border-top:1px solid var(--line)}
+.srow label{flex:1; min-width:0; font-weight:600}
+.pair{display:flex; align-items:center; gap:.35rem; color:var(--muted)}
+.pair input{width:6.3rem; font:inherit; font-size:1rem; font-weight:800; color:var(--ink); background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:.45rem .3rem; text-align:center}
+.export{display:block; width:100%; margin-top:.75rem; padding:.9rem; font:inherit; font-weight:700; background:var(--surface); color:var(--ink); border:1px solid var(--line); border-radius:16px; cursor:pointer}
+.export.ghost{background:transparent}
+.note{font-size:.8rem; color:var(--muted); margin:1rem 0 0; text-align:center}
+.toast{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(1rem + env(safe-area-inset-bottom,0px)); max-width:calc(100% - 2rem); background:var(--ink); color:var(--surface); padding:.75rem 1rem; border-radius:14px; font-weight:600; font-size:.95rem; z-index:10}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--muted); outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.brk{transition:none}.btn:active{transform:none}}
 </style>
 </head>
@@ -162,11 +189,24 @@ summary::-webkit-details-marker{display:none}
     <span class="pill" id="pill"><i></i><span id="pillText">Henüz giriş yok</span></span>
   </header>
 
+  <button class="alert" id="alert" type="button" hidden></button>
+
   <section class="card" aria-live="polite">
-    <div id="todayIO"></div>
+    <div class="stats">
+      <div><span>Giriş</span><b id="stIn">--:--</b></div>
+      <div><span>Çıkış</span><b id="stOut">--:--</b></div>
+      <div class="r"><span id="stDiffL">Bugünkü fark</span><b id="stDiff">–</b></div>
+    </div>
     <div class="tl" id="todayTL"></div>
+    <div class="legend">
+      <span><i style="background:var(--ink)"></i>Ofis</span><span><i style="background:var(--task)"></i>Dış görev</span>
+      <span><i style="background:var(--amber)"></i>Mola</span><span><i style="background:repeating-linear-gradient(45deg,var(--track) 0 2px,var(--muted) 2px 4px)"></i>Yemek</span>
+      <span><i style="background:var(--minus)"></i>İhlal</span>
+    </div>
     <p class="worked" id="worked">&nbsp;</p>
-    <button class="btn" id="dayBtn" type="button">İşe geldim</button>
+    <div id="warn"></div>
+    <button class="btn" id="btnA" type="button">İşe geldim</button>
+    <button class="btn ghost" id="btnB" type="button">Dış görevdeyim</button>
   </section>
 
   <section class="card brk" id="brk" aria-live="polite">
@@ -174,6 +214,7 @@ summary::-webkit-details-marker{display:none}
       <div><p class="lbl">Bugünkü mola</p><p class="big" id="brkTotal">0 dk</p></div>
       <button class="btn go" id="punch" type="button">Molaya çık</button>
     </div>
+    <p class="hint" id="brkHint" hidden>Mola sadece ofisteyken tutulur.</p>
     <div id="brkOut" hidden>
       <p class="lbl" id="since">Moladasın</p>
       <p class="timer" id="timer">0:00</p>
@@ -187,45 +228,70 @@ summary::-webkit-details-marker{display:none}
     <table>
       <thead><tr><th></th><th>Bu hafta</th><th>Bu ay</th><th>Toplam</th></tr></thead>
       <tbody>
-        <tr><th>Fark</th><td id="fWeek">0 dk</td><td id="fMonth">0 dk</td><td id="fAll">0 dk</td></tr>
-        <tr><th>Mola</th><td id="tWeek">0 dk</td><td id="tMonth">0 dk</td><td id="tAll">0 dk</td></tr>
+        <tr><th>Fark</th><td id="fW">0 dk</td><td id="fM">0 dk</td><td id="fA">0 dk</td></tr>
+        <tr><th>Mola</th><td id="bW">0 dk</td><td id="bM">0 dk</td><td id="bA">0 dk</td></tr>
+        <tr><th>İhlal</th><td id="vW">0</td><td id="vM">0</td><td id="vA">0</td></tr>
       </tbody>
     </table>
   </div>
-  <p class="foot">Fark, giriş ve çıkışı tamamlanmış günlerden hesaplanır. Yemek arası çalışmaya da molaya da sayılmaz.</p>
+  <p class="foot">Fark tamamlanan günlerden hesaplanır. Hafta sonu çalışmanın tamamı artı yazılır ve yemek arası düşülmez. Hafta içi yemek arası çalışmaya da molaya da sayılmaz, dış görevdeki molalar takip edilmez.</p>
 
-  <h2>Bugünkü molalar</h2>
-  <div class="card listcard" id="today"></div>
+  <h2>Bugünün kayıtları</h2>
+  <div class="card ed" id="todayEd"></div>
 
   <h2 id="pastH" hidden>Geçmiş kayıtlar</h2>
   <div id="past"></div>
 
+  <h2>İzin, rapor ve resmi tatil</h2>
+  <div class="card ed">
+    <div class="mark">
+      <label>Başlangıç<input type="date" id="markS"></label>
+      <label>Bitiş (isteğe bağlı)<input type="date" id="markE"></label>
+      <label class="full">Tür<select id="markT"><option value="yillik">Yıllık izin</option><option value="rapor">Rapor</option><option value="tatil">Resmi tatil</option></select></label>
+    </div>
+    <div class="addbtns"><button class="pri" type="button" id="markBtn">İşaretle</button></div>
+    <p class="empty">Aralık seçersen sadece hafta içi günler işaretlenir. Bu günlerde 8,5 saat hedefi ve çekirdek saat kontrolü olmaz.</p>
+    <div id="future"></div>
+  </div>
+
   <h2>Ayarlar</h2>
   <div class="card settings">
-    <div class="srow">
-      <label for="target">Günlük süre, yemek dahil (saat)</label>
-      <input id="target" type="number" inputmode="decimal" step="0.25" min="1" max="16" value="9.5">
-    </div>
-    <div class="srow">
-      <label for="lunchS">Yemek arası</label>
-      <span class="pair"><input id="lunchS" type="time" value="12:00" aria-label="Yemek arası başlangıç">–<input id="lunchE" type="time" value="13:00" aria-label="Yemek arası bitiş"></span>
-    </div>
+    <div class="srow"><label for="mesaiS">Mesai</label><span class="pair"><input id="mesaiS" data-set="mesai" type="time">–<input id="mesaiE" data-set="mesai" type="time"></span></div>
+    <div class="srow"><label for="coreS">Çekirdek saat</label><span class="pair"><input id="coreS" data-set="core" type="time">–<input id="coreE" data-set="core" type="time"></span></div>
+    <div class="srow"><label for="lunchS">Yemek arası</label><span class="pair"><input id="lunchS" data-set="lunch" type="time">–<input id="lunchE" data-set="lunch" type="time"></span></div>
   </div>
+  <p class="foot" id="setInfo"></p>
+
   <button class="export" id="export" type="button">Tüm kayıtları indir (CSV)</button>
   <button class="export ghost" id="importBtn" type="button">Yedekten geri yükle (CSV)</button>
   <input type="file" id="importFile" accept=".csv,text/csv" hidden>
-  <p class="note" id="note">Kayıtlar bu cihazda tutuluyor.</p>
+  <p class="note" id="note"></p>
   <div class="toast" id="toast" role="status" hidden></div>
 </main>
 
 <script>
 (function(){
-  const LS = "molaTakip:v1";
+  const DEMO = false;
+  const LS = DEMO ? "mesaiTakip:demo" : "molaTakip:v1";
   const $ = id => document.getElementById(id);
-  let state = { days:{}, open:null, target:570, lunchS:720, lunchE:780 };
+  const DEF = { mesaiS:480, mesaiE:1050, coreS:510, coreE:990, lunchS:720, lunchE:780 };
+  let state = { days:{}, open:null, set:{ ...DEF } };
 
-  const norm = d => Array.isArray(d) ? { breaks:d, in:null, out:null }
-    : { breaks:Array.isArray(d && d.breaks) ? d.breaks : [], in: typeof (d&&d.in) === "number" ? d.in : null, out: typeof (d&&d.out) === "number" ? d.out : null };
+  const num = v => typeof v === "number" && isFinite(v);
+  const TYPES = { normal:"Normal gün", yillik:"Yıllık izin", rapor:"Rapor", tatil:"Resmi tatil" };
+  const typeOf = d => (d && TYPES[d.type] && d.type) || "normal";
+  const norm = d => {
+    if (Array.isArray(d)) return { segs:[], breaks:d.filter(b => b && num(b.s) && num(b.e)), izin:false, type:"normal" };
+    d = d || {};
+    let segs = Array.isArray(d.segs) ? d.segs.filter(s => s && num(s.s) && (s.e == null || num(s.e))).map(s => ({ t: s.t === "g" ? "g" : "o", s:s.s, e: num(s.e) ? s.e : null })) : [];
+    if (!Array.isArray(d.segs) && num(d.in)) segs = [{ t:"o", s:d.in, e: num(d.out) ? d.out : null }];
+    return { segs, breaks: Array.isArray(d.breaks) ? d.breaks.filter(b => b && num(b.s) && num(b.e)) : [], izin: !!d.izin, type: typeOf(d) };
+  };
+  const normSet = p => {
+    const s = { ...DEF };
+    if (p) for (const k in DEF) if (p[k] === null || num(p[k])) s[k] = p[k];
+    return s;
+  };
 
   try {
     const raw = localStorage.getItem(LS);
@@ -233,11 +299,42 @@ summary::-webkit-details-marker{display:none}
       const p = JSON.parse(raw);
       if (p && p.days) {
         const days = {}; for (const k in p.days) days[k] = norm(p.days[k]);
-        state = { days, open: p.open ?? null, target: typeof p.target === "number" ? p.target : 570,
-          lunchS: p.lunchS === undefined ? 720 : p.lunchS, lunchE: p.lunchE === undefined ? 780 : p.lunchE };
+        state = { days, open: num(p.open) ? p.open : null, set: normSet(p.set || p) };
       }
     }
   } catch(e){}
+
+  if (DEMO) state = { days: demoDays(), open:null, set:{ ...DEF } };
+  function demoDays(){
+    const pad2 = n => String(n).padStart(2, "0");
+    const key = d => d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+    const t = (d, h, m) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m).getTime();
+    const plans = [
+      d => ({ segs:[{ t:"o", s:t(d,8,15), e:t(d,17,50) }], breaks:[{ s:t(d,10,15), e:t(d,10,30) }, { s:t(d,15,0), e:t(d,15,12) }] }),
+      d => ({ segs:[{ t:"o", s:t(d,9,5), e:t(d,18,10) }], breaks:[{ s:t(d,14,20), e:t(d,14,35) }], izin:true }),
+      d => ({ segs:[{ t:"g", s:t(d,8,0), e:t(d,17,30) }], breaks:[] }),
+      d => ({ segs:[{ t:"g", s:t(d,8,30), e:t(d,12,0) }, { t:"o", s:t(d,13,0), e:t(d,17,45) }], breaks:[{ s:t(d,15,30), e:t(d,15,45) }] }),
+      d => ({ segs:[{ t:"o", s:t(d,7,55), e:t(d,16,0) }], breaks:[{ s:t(d,10,0), e:t(d,10,10) }] }),
+      d => ({ segs:[], breaks:[], type:"yillik" }),
+      d => ({ segs:[], breaks:[], type:"rapor" }),
+      d => ({ segs:[{ t:"o", s:t(d,8,20), e:t(d,17,40) }], breaks:[{ s:t(d,10,0), e:t(d,10,25) }, { s:t(d,12,40), e:t(d,13,20) }, { s:t(d,15,10), e:t(d,15,35) }] }),
+      d => ({ segs:[], breaks:[], type:"tatil" }),
+      d => ({ segs:[{ t:"o", s:t(d,8,10), e:t(d,11,0) }, { t:"g", s:t(d,11,0), e:t(d,18,0) }], breaks:[{ s:t(d,9,30), e:t(d,9,45) }] }),
+      d => ({ segs:[{ t:"o", s:t(d,8,40), e:t(d,12,0) }, { t:"o", s:t(d,13,0), e:t(d,17,35) }], breaks:[{ s:t(d,15,0), e:t(d,15,15) }] })
+    ];
+    const out = {}; let wi = 0, satDone = false;
+    const now = new Date();
+    for (let i = 14; i >= 1; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i), g = d.getDay();
+      if (g === 6 && !satDone) { satDone = true; out[key(d)] = norm({ segs:[{ t:"o", s:t(d,10,0), e:t(d,14,30) }], breaks:[] }); continue; }
+      if (g === 0 || g === 6) continue;
+      out[key(d)] = norm(plans[wi++ % plans.length](d));
+    }
+    // today: arrived at the office, one break so far
+    const s0 = Math.min(t(now,8,22), Date.now() - 2 * 60000);
+    out[key(now)] = norm({ segs:[{ t:"o", s:s0, e:null }], breaks: Date.now() > t(now,10,20) ? [{ s:t(now,10,5), e:t(now,10,20) }] : [] });
+    return out;
+  }
 
   const STANDALONE = !window.claude && window.top === window;
   const LOCAL_NOTE = STANDALONE ? "Kayıtlar bu telefonda tutuluyor. Arada bir yedek al."
@@ -252,35 +349,32 @@ summary::-webkit-details-marker{display:none}
   // ---------- storage ----------
   let mode = "local", db = null, uid = null, chain = Promise.resolve(), unsub = null;
   function saveLocal(){ try { localStorage.setItem(LS, JSON.stringify(state)); } catch(e){} }
-  function goLocal(msg){
-    mode = "local"; if (unsub) { try { unsub(); } catch(e){} unsub = null; }
-    $("note").textContent = msg; saveLocal();
-  }
+  function goLocal(){ mode = "local"; if (unsub) { try { unsub(); } catch(e){} unsub = null; } $("note").textContent = LOCAL_NOTE; saveLocal(); }
   function enqueue(fn){
     if (mode !== "db") return;
     chain = chain.then(fn).catch(err => {
       if (err && err.code === "unavailable") return new Promise(r => setTimeout(r, 800 + Math.random()*800)).then(fn).catch(()=>{});
-      if (err && (err.code === "invalid_argument" || err.code === "revoked" || err.code === "not_granted"))
-        goLocal(LOCAL_NOTE);
+      if (err && (err.code === "invalid_argument" || err.code === "revoked" || err.code === "not_granted")) goLocal();
     });
   }
-  const isEmpty = d => !d || (!d.breaks.length && d.in == null && d.out == null);
+  const isEmpty = d => !d || (!d.segs.length && !d.breaks.length && !d.izin && typeOf(d) === "normal");
   function writeDay(key){
     const d = state.days[key];
+    if (d) d.segs.sort((a,b) => a.s - b.s);
     if (isEmpty(d)) delete state.days[key];
     saveLocal();
-    const body = isEmpty(d) ? null : { date:key, breaks:d.breaks.slice(), in:d.in, out:d.out };
+    const body = isEmpty(d) ? null : { date:key, segs:d.segs.map(s => ({ ...s })), breaks:d.breaks.map(b => ({ ...b })), izin:d.izin, type:typeOf(d) };
     enqueue(() => { const ref = db.doc("data/users/" + uid + "/d-" + key); return body ? ref.set(body) : ref.delete(); });
   }
   function writeOpen(){ saveLocal(); const open = state.open; enqueue(() => db.doc("data/users/" + uid + "/state").set({ open })); }
-  function writeSettings(){ saveLocal(); const body = { target:state.target, lunchS:state.lunchS, lunchE:state.lunchE }; enqueue(() => db.doc("data/users/" + uid + "/settings").set(body)); }
+  function writeSettings(){ saveLocal(); const body = { ...state.set }; enqueue(() => db.doc("data/users/" + uid + "/settings").set(body)); }
 
   async function connect(){
     if (!window.claude || typeof window.claude.use !== "function") return;
     const [d, u] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
     if (!d || !u) return;
     const [id, owner, editor, canWrite] = await Promise.all([u.id(), u.isOwner(), u.canEdit(), u.can("data.write")]);
-    if (!id || !(owner || editor || canWrite === true)) return;   // stay on this device
+    if (!id || !(owner || editor || canWrite === true)) return;
     db = d; uid = id; mode = "db";
     $("note").textContent = "Kayıtlar hesabına kaydediliyor, her cihazdan görebilirsin.";
     let first = true;
@@ -288,327 +382,547 @@ summary::-webkit-details-marker{display:none}
       if (mode !== "db") return;
       if (first) {
         first = false;
-        const hasLocal = Object.keys(state.days).length || state.open;
-        if (snap.empty && hasLocal) {
+        if (snap.empty && (Object.keys(state.days).length || state.open)) {
           setTimeout(() => { Object.keys(state.days).forEach(writeDay); writeOpen(); writeSettings(); }, 0);
           return;
         }
       }
-      const days = {}; let open = null, target = state.target, lunchS = state.lunchS, lunchE = state.lunchE;
+      const days = {}; let open = null, set = state.set;
       snap.docs.forEach(doc => {
         const b = doc.data(); if (!b) return;
-        if (doc.id === "state") open = typeof b.open === "number" ? b.open : null;
-        else if (doc.id === "settings") { if (typeof b.target === "number") target = b.target; if (b.lunchS !== undefined) lunchS = b.lunchS; if (b.lunchE !== undefined) lunchE = b.lunchE; }
+        if (doc.id === "state") open = num(b.open) ? b.open : null;
+        else if (doc.id === "settings") set = normSet(b);
         else if (doc.id.startsWith("d-")) days[doc.id.slice(2)] = norm(b);
       });
-      state = { days, open, target, lunchS, lunchE };
+      state = { days, open, set };
       saveLocal(); render();
-    }, () => goLocal(LOCAL_NOTE));
+    }, () => goLocal());
   }
 
-  // ---------- helpers ----------
+  // ---------- time helpers ----------
+  const MIN = 60000;
   const pad = n => String(n).padStart(2, "0");
   const dayKey = ms => { const d = new Date(ms); return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()); };
-  const keyStart = key => { const [y,m,d] = key.split("-").map(Number); return new Date(y, m-1, d).getTime(); };
+  const keyStart = k => { const [y,m,d] = k.split("-").map(Number); return new Date(y, m-1, d).getTime(); };
+  const at = (k, m) => keyStart(k) + m * MIN;
   const hm = ms => { const d = new Date(ms); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
-  const mins = ms => Math.round(ms / 60000);
-  const dk = ms => ms < 60000 && ms > 0 ? "<1 dk" : mins(ms) + " dk";
+  const mHm = m => m == null ? "" : pad(Math.floor(m/60)) + ":" + pad(m % 60);
+  const hmToM = v => { if (!v) return null; const [h, m] = v.split(":").map(Number); return h * 60 + m; };
+  const mins = ms => Math.round(ms / MIN);
+  const dk = ms => ms < MIN && ms > 0 ? "<1 dk" : mins(ms) + " dk";
   const hdur = ms => { const m = Math.abs(mins(ms)); return m >= 60 ? Math.floor(m/60) + " sa" + (m%60 ? " " + (m%60) + " dk" : "") : m + " dk"; };
-  const short = ms => hdur(ms);
-  const signed = (ms, f = hdur) => { const m = mins(ms); return (m > 0 ? "+" : m < 0 ? "−" : "") + f(ms); };
+  const signed = ms => { const m = mins(ms); return (m > 0 ? "+" : m < 0 ? "−" : "") + hdur(ms); };
   const cls = ms => { const m = mins(ms); return m > 0 ? "plus" : m < 0 ? "minus" : ""; };
   const clockFmt = ms => { const s = Math.max(0, Math.floor(ms/1000)); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60; return (h ? h + ":" + pad(m) : m) + ":" + pad(x); };
-  const dateLabel = (key, o) => new Date(keyStart(key)).toLocaleDateString("tr-TR", o || { day:"numeric", month:"long", weekday:"long" });
-  const targetMs = () => state.target * 60000;
-  const getDay = key => state.days[key] || (state.days[key] = { breaks:[], in:null, out:null });
-  const lunchLen = () => (state.lunchS != null && state.lunchE != null && state.lunchE > state.lunchS) ? (state.lunchE - state.lunchS) * 60000 : 0;
-  const lunchWin = k => lunchLen() ? [keyStart(k) + state.lunchS * 60000, keyStart(k) + state.lunchE * 60000] : null;
-  const ov = (a, b, w) => w ? Math.max(0, Math.min(b, w[1]) - Math.max(a, w[0])) : 0;
-  const netWork = (k, a, b) => (b - a) - ov(a, b, lunchWin(k));
-  const netTarget = () => targetMs() - lunchLen();
-  const dayFark = (k, x) => netWork(k, x.in, x.out) - netTarget();
-  const bCount = (a, b) => (b - a) - ov(a, b, lunchWin(dayKey(a)));
-  const breakSum = d => d.breaks.reduce((a,b) => a + bCount(b.s, b.e), 0);
-  function targetEnd(k, inMs){
-    const w = lunchWin(k), need = netTarget();
-    if (!w) return inMs + need;
-    let st = inMs; if (st >= w[0] && st < w[1]) st = w[1];
-    if (st < w[0]) { const e = st + need; return e > w[0] ? e + (w[1] - w[0]) : e; }
-    return st + need;
-  }
-  const minToHm = m => m == null ? "" : pad(Math.floor(m / 60)) + ":" + pad(m % 60);
+  const dateLabel = (k, o) => new Date(keyStart(k)).toLocaleDateString("tr-TR", o || { day:"numeric", month:"long", weekday:"long" });
+  const isWE = k => { const g = new Date(keyStart(k)).getDay(); return g === 0 || g === 6; };
+  const todayKey = () => dayKey(Date.now());
 
-  function fieldHtml(key, d, f, label){
-    return '<div class="field"><label for="' + f + '-' + key + '">' + label + '</label><input type="time" id="' + f + '-' + key + '" data-k="' + key + '" data-f="' + f + '" value="' + (d[f] == null ? "" : hm(d[f])) + '"></div>';
-  }
-  function timelineHtml(k, d, now, withLabels, openStart){
-    if (d.in == null) return withLabels ? '<div class="bar"></div><div class="tlab"><span style="left:0">Giriş bekleniyor</span></div>' : "";
-    const end = d.out != null ? d.out : now;
-    const tEnd = targetEnd(k, d.in);
-    const span = Math.max(end, tEnd) - d.in || 1;
-    const pct = ms => Math.max(0, Math.min(100, (ms - d.in) / span * 100));
-    let h = '<div class="bar"><div class="w" style="left:0;width:' + pct(end) + '%"></div>';
-    const list = d.breaks.slice(); if (openStart) list.push({ s:openStart, e:now });
-    list.forEach(b => { const l = pct(b.s), r = pct(Math.min(b.e, end)); if (r > l) h += '<div class="b" style="left:' + l + '%;width:' + Math.max(r - l, .6) + '%"></div>'; });
-    const w = lunchWin(k);
-    if (w) { const l = pct(w[0]), r = pct(w[1]); if (r > l) h += '<div class="l" style="left:' + l + '%;width:' + (r - l) + '%"></div>'; }
-    h += '<div class="t" style="left:calc(' + pct(tEnd) + '% - 1px)"></div></div>';
-    if (withLabels) {
-      const tp = pct(tEnd);
-      h += '<div class="tlab"><span style="left:0">' + hm(d.in) + '</span><span style="' + (tp > 75 ? "right:" + (100 - tp) + "%" : "left:" + tp + "%") + '">Hedef ' + hm(tEnd) + "</span></div>";
+  // ---------- interval helpers ----------
+  const merge = list => {
+    const a = list.filter(x => x.e > x.s).map(x => ({ s:x.s, e:x.e })).sort((x,y) => x.s - y.s), out = [];
+    for (const x of a) { const l = out[out.length - 1]; if (l && x.s <= l.e) l.e = Math.max(l.e, x.e); else out.push(x); }
+    return out;
+  };
+  const ovLen = (s, e, merged) => merged.reduce((t, x) => t + Math.max(0, Math.min(e, x.e) - Math.max(s, x.s)), 0);
+  const subtract = (req, merged) => {
+    const out = [];
+    for (const r of req) {
+      let cur = r.s;
+      for (const x of merged) { if (x.e <= cur || x.s >= r.e) continue; if (x.s > cur) out.push({ s:cur, e:Math.min(x.s, r.e) }); cur = Math.max(cur, x.e); if (cur >= r.e) break; }
+      if (cur < r.e) out.push({ s:cur, e:r.e });
     }
+    return out;
+  };
+
+  // ---------- day model ----------
+  const S = () => state.set;
+  const lunchOn = () => S().lunchS != null && S().lunchE != null && S().lunchE > S().lunchS;
+  const lunchWin = k => lunchOn() && !isWE(k) ? [{ s:at(k, S().lunchS), e:at(k, S().lunchE) }] : [];   // no lunch deduction on weekends
+  const lunchLen = () => lunchOn() ? (S().lunchE - S().lunchS) * MIN : 0;
+  const blank = () => ({ segs:[], breaks:[], izin:false, type:"normal" });
+  const isOff = (k, x) => isWE(k) || typeOf(x) !== "normal";
+  const offLabel = (k, x) => typeOf(x) !== "normal" ? TYPES[typeOf(x)] : (isWE(k) ? "Hafta sonu" : "");
+  const targetNet = (k, x) => isOff(k, x) ? 0 : (S().mesaiE - S().mesaiS) * MIN - lunchLen();
+  const getDay = k => state.days[k] || (state.days[k] = blank());
+  const curSeg = () => { const d = state.days[todayKey()]; return d ? d.segs.find(s => s.e == null) || null : null; };
+
+  // segments with open ends resolved to "now" only for today
+  function resolved(k, x, now){
+    const live = k === dayKey(now);
+    return x.segs.map(s => ({ t:s.t, s:s.s, e: s.e != null ? s.e : (live ? Math.max(now, s.s) : null) })).filter(s => s.e != null);
+  }
+  const presence = (k, x, now) => merge(resolved(k, x, now));
+  const netWork = (k, x, now) => { const L = lunchWin(k); return presence(k, x, now).reduce((t, p) => t + (p.e - p.s) - ovLen(p.s, p.e, L), 0); };
+  const complete = x => x.segs.length > 0 ? x.segs.every(s => s.e != null) : typeOf(x) !== "normal";
+  const dayFark = (k, x, now) => netWork(k, x, now) - targetNet(k, x);
+  function excluded(k, x, now){ return merge(lunchWin(k).concat(resolved(k, x, now).filter(s => s.t === "g"))); }
+  const bCount = (k, x, b, now) => (b.e - b.s) - ovLen(b.s, b.e, excluded(k, x, now));
+  const breakSum = (k, x, now) => x.breaks.reduce((t, b) => t + bCount(k, x, b, now), 0);
+
+  function violations(k, x, now){
+    if (isOff(k, x) || S().coreS == null || S().coreE == null || S().coreE <= S().coreS) return [];
+    const live = k === dayKey(now);
+    if (!live && !complete(x)) return [];
+    if (!live && !x.segs.length) return [];
+    let req = subtract([{ s:at(k, S().coreS), e:at(k, S().coreE) }], lunchWin(k));
+    if (live) req = req.map(r => ({ s:r.s, e:Math.min(r.e, now) })).filter(r => r.e > r.s);
+    const reqStart = at(k, S().coreS), reqEnd = at(k, S().coreE);
+    return subtract(req, presence(k, x, now)).filter(g => g.e - g.s >= MIN).map(g => ({
+      ...g, kind: g.s === reqStart ? "Geç giriş" : (g.e === reqEnd ? "Erken çıkış" : "Çekirdek saatte yok")
+    }));
+  }
+  function targetEndFrom(k, startMs, remaining){
+    const L = lunchWin(k)[0];
+    let t = startMs; if (L && t >= L.s && t < L.e) t = L.e;
+    let e = t + remaining; if (L && t < L.s && e > L.s) e += L.e - L.s;
+    return e;
+  }
+
+  // ---------- html pieces ----------
+  function timelineHtml(k, x, now, labels){
+    const segs = resolved(k, x, now);
+    if (!segs.length) return labels ? '<div class="bar"></div><div class="tlab"><span>' + (isOff(k, x) ? offLabel(k, x) : mHm(S().mesaiS)) + "</span><span>" + (isOff(k, x) ? "" : mHm(S().mesaiE)) + "</span></div>" : "";
+    const we = isOff(k, x);
+    const first = Math.min(...segs.map(s => s.s)), last = Math.max(...segs.map(s => s.e));
+    const tMark = we ? null : targetEndFrom(k, first, targetNet(k, x));
+    let rs = first, re = last;
+    if (!we) { rs = Math.min(rs, at(k, S().mesaiS)); re = Math.max(re, at(k, S().mesaiE), tMark); }
+    const span = (re - rs) || 1, p = ms => Math.max(0, Math.min(100, (ms - rs) / span * 100));
+    const block = (c, s, e) => { const l = p(s), r = p(e); return r > l ? '<div class="' + c + '" style="left:' + l + '%;width:' + Math.max(r - l, .5) + '%"></div>' : ""; };
+    let h = '<div class="bar">';
+    segs.forEach(s => { h += block(s.t, s.s, s.e); });
+    const brs = x.breaks.slice(); if (state.open && dayKey(state.open) === k) brs.push({ s:state.open, e:now });
+    brs.forEach(b => { h += block("b", b.s, b.e); });
+    lunchWin(k).forEach(l => { h += block("l", l.s, l.e); });
+    violations(k, x, now).forEach(v => { h += block("v", v.s, v.e); });
+    if (!we && S().coreS != null) [S().coreS, S().coreE].forEach(m => { h += '<div class="k" style="left:calc(' + p(at(k, m)) + '% - 1px)"></div>'; });
+    if (tMark) h += '<div class="t" style="left:calc(' + p(tMark) + '% - 1px)"></div>';
+    h += "</div>";
+    if (labels) h += '<div class="tlab"><span>' + hm(rs) + "</span><span>" + hm(re) + "</span></div>";
     return h;
   }
-  function lunchNote(b){
-    const o = ov(b.s, b.e, lunchWin(dayKey(b.s))); if (!o) return "";
-    return '<small class="ln">' + (o >= b.e - b.s ? "Yemek arasında, sayılmadı" : mins(o) + " dk yemek arası düşüldü") + "</small>";
+
+  function breakNote(k, x, b, now){
+    const o = ovLen(b.s, b.e, excluded(k, x, now)); if (!o) return "";
+    return '<small class="ln">' + (o >= b.e - b.s ? "Yemek arası ya da dış görevde, sayılmadı" : mins(o) + " dk düşüldü") + "</small>";
   }
-  function rowsHtml(key, list){
-    return '<ul class="rows">' + list.map((b, i) =>
-      '<li><span class="dot"></span><span class="range">' + hm(b.s) + " – " + hm(b.e) + lunchNote(b) + '</span><span class="dur">' + (bCount(b.s, b.e) > 0 ? dk(bCount(b.s, b.e)) : "0 dk") +
-      '</span><button class="del" type="button" data-k="' + key + '" data-i="' + i + '" aria-label="' + hm(b.s) + ' molasını sil">Sil</button></li>').join("") + "</ul>";
+
+  function editorHtml(k, x, now){
+    let h = '<div class="dtype"><label for="type-' + k + '">Gün türü</label><select id="type-' + k + '" data-type="' + k + '">' +
+      Object.keys(TYPES).map(t => '<option value="' + t + '"' + (typeOf(x) === t ? " selected" : "") + ">" + TYPES[t] + "</option>").join("") + "</select></div>";
+    h += "<h3>Ofis ve dış görev</h3>";
+    const segs = x.segs.map((s, i) => ({ s, i })).sort((a, b) => a.s.s - b.s.s);
+    h += segs.length ? '<ul class="list">' + segs.map(({ s, i }) =>
+      '<li class="seg"><span class="dot ' + s.t + '"></span><span class="kind">' + (s.t === "g" ? "Dış görev" : "Ofis") + (s.e == null ? " (devam ediyor)" : "") + "</span>" +
+      '<button class="del" type="button" data-delseg="' + k + '" data-i="' + i + '">Sil</button>' +
+      '<div class="times"><input type="time" aria-label="Başlangıç" data-k="' + k + '" data-i="' + i + '" data-f="s" value="' + hm(s.s) + '">' +
+      '<span class="sep">–</span><input type="time" aria-label="Bitiş" data-k="' + k + '" data-i="' + i + '" data-f="e" value="' + (s.e != null ? hm(s.e) : "") + '"></div></li>').join("") + "</ul>"
+      : '<p class="empty">Kayıt yok.</p>';
+    h += '<div class="add" data-addrow="' + k + '"><select aria-label="Tür"><option value="o">Ofis</option><option value="g">Dış görev</option></select>' +
+      '<input type="time" aria-label="Başlangıç"><span class="sep">–</span><input type="time" aria-label="Bitiş"></div>' +
+      '<div class="addbtns"><button class="pri" type="button" data-add="' + k + '">Ekle</button><button type="button" data-fullg="' + k + '">Tüm gün dış görev</button></div>';
+
+    const br = x.breaks.slice().sort((a, b) => a.s - b.s);
+    if (br.length) {
+      h += "<h3>Molalar</h3>" + '<ul class="list">' + br.map(b =>
+        '<li class="brow"><span class="dot"></span><span class="range">' + hm(b.s) + " – " + hm(b.e) + breakNote(k, x, b, now) + '</span><span class="dur">' + dk(Math.max(0, bCount(k, x, b, now))) +
+        '</span><button class="del" type="button" data-delbr="' + k + '" data-s="' + b.s + '">Sil</button></li>').join("") + "</ul>";
+    }
+    const v = violations(k, x, now);
+    if (v.length) {
+      const tot = v.reduce((t, g) => t + g.e - g.s, 0);
+      h += "<h3>Çekirdek saat ihlalleri</h3>" + '<ul class="list">' + v.map(g =>
+        '<li class="vrow"><span class="dot v"></span><span class="range">' + hm(g.s) + " – " + hm(g.e) + '<small class="ln">' + g.kind + '</small></span><span class="dur minus">' + dk(g.e - g.s) + "</span></li>").join("") + "</ul>" +
+        '<button class="izin' + (x.izin ? " on" : "") + '" type="button" data-izin="' + k + '">' +
+        (x.izin ? "Mazeret izni girildi, geri almak için dokun" : hdur(tot) + " için mazeret izni girdim") + "</button>";
+    }
+    return h;
   }
 
   // ---------- render ----------
   function renderLive(){
-    const now = Date.now(), d = new Date(now), today = dayKey(now);
-    const dayStart = keyStart(today);
-    const weekStart = dayStart - ((d.getDay() + 6) % 7) * 86400000;
-    const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    const now = Date.now(), today = dayKey(now), d0 = new Date(now);
+    const dayStart = keyStart(today), weekStart = dayStart - ((d0.getDay() + 6) % 7) * 86400000;
+    const monthStart = new Date(d0.getFullYear(), d0.getMonth(), 1).getTime();
+    const x = state.days[today] || blank();
+    const we = isOff(today, x), cur = curSeg();
 
-    const bSince = b0 => { let t = 0; for (const k in state.days) for (const b of state.days[k].breaks) if (b.s >= b0) t += bCount(b.s, b.e); if (state.open && state.open >= b0) t += bCount(state.open, now); return t; };
-    $("brkTotal").textContent = dk(bSince(dayStart));
-    $("tWeek").textContent = short(bSince(weekStart)); $("tMonth").textContent = short(bSince(monthStart)); $("tAll").textContent = short(bSince(0));
+    // stats
+    const segs = resolved(today, x, now);
+    $("stIn").textContent = x.segs.length ? hm(Math.min(...x.segs.map(s => s.s))) : "--:--";
+    $("stOut").textContent = x.segs.length && !cur && complete(x) ? hm(Math.max(...x.segs.map(s => s.e))) : "--:--";
+    const work = netWork(today, x, now), f = work - targetNet(today, x);
+    $("stDiffL").textContent = we ? offLabel(today, x) : "Bugünkü fark";
+    const dEl = $("stDiff");
+    if (segs.length) { dEl.textContent = signed(f); dEl.className = cls(f); } else { dEl.textContent = "–"; dEl.className = ""; }
+    $("todayTL").innerHTML = timelineHtml(today, x, now, true);
 
-    let fw = 0, fm = 0, fa = 0;
-    for (const k in state.days) {
-      const x = state.days[k]; if (x.in == null || x.out == null) continue;
-      const f = dayFark(k, x), ks = keyStart(k);
-      fa += f; if (ks >= monthStart) fm += f; if (ks >= weekStart) fw += f;
+    // info text
+    let info;
+    if (!segs.length) info = we ? "Bugün " + offLabel(today, x).toLocaleLowerCase("tr-TR") + ". Çalışırsan tüm süre artı yazılır." : "Gelince \u201cİşe geldim\u201d, dışarıdaysan \u201cDış görevdeyim\u201d butonuna bas.";
+    else if (we) info = cur ? "Şu ana kadar net " + hdur(work) + " çalıştın, hepsi artı yazılıyor." : "Gün kapandı, bugün net " + hdur(work) + " çalıştın ve hepsi artı yazıldı. Düzeltme gerekirse aşağıdaki \u201cBugünün kayıtları\u201d bölümünü kullan.";
+    else if (!cur) info = "Gün kapandı, bugün net " + hdur(work) + " çalıştın. Düzeltme gerekirse aşağıdaki \u201cBugünün kayıtları\u201d bölümünü kullan.";
+    else if (f < 0) {
+      let tEnd = targetEndFrom(today, now, -f);
+      const coreEnd = S().coreE != null ? at(today, S().coreE) : 0;
+      info = "Şu ana kadar net " + hdur(work) + ", hedefe " + hdur(-f) + " kaldı. Hedef çıkış " + hm(tEnd) + (coreEnd > tEnd ? ", ama çekirdek saat " + hm(coreEnd) + "'a kadar." : ".");
+    } else info = "Hedefi geçtin, şu ana kadar net " + hdur(work) + ".";
+    $("worked").textContent = info;
+
+    // warning banner
+    const v = violations(today, x, now), vTot = v.reduce((t, g) => t + g.e - g.s, 0);
+    let w = "";
+    if (!we && S().coreS != null) {
+      const cs = at(today, S().coreS), ce = at(today, S().coreE);
+      const inCore = now >= cs && now < ce && !lunchWin(today).some(l => now >= l.s && now < l.e);
+      if (!cur && !x.segs.length && now < cs && cs - now <= 90 * MIN)
+        w = '<div class="warn info">Çekirdek saat ' + hm(cs) + "'da başlıyor, " + hdur(cs - now) + " kaldı.</div>";
+      else if (inCore && !cur)
+        w = '<div class="warn red">Çekirdek saatteyiz ve şu an mesaide görünmüyorsun. Bugünkü ihlal ' + hdur(vTot) + ".</div>";
+      else if (vTot > 0 && !x.izin)
+        w = '<div class="warn amb">Bugün ' + hdur(vTot) + " çekirdek saat ihlali var, mazeret izni girmen gerekiyor." +
+          '<button type="button" data-izin="' + today + '">Mazeret iznini girdim</button></div>';
     }
-    [["fWeek",fw],["fMonth",fm],["fAll",fa]].forEach(([id,v]) => { const el = $(id); el.textContent = signed(v, short); el.className = cls(v); });
+    if ($("warn").innerHTML !== w) $("warn").innerHTML = w;
 
-    const t = state.days[today] || { breaks:[], in:null, out:null };
-    const diffEl = $("todayDiff");
-    if (t.in != null) {
-      const end = t.out != null ? t.out : now, work = Math.max(0, netWork(today, t.in, end)), f = work - netTarget();
-      if (diffEl) { diffEl.textContent = signed(f, short); diffEl.className = "diff " + cls(f); }
-      $("worked").textContent = t.out != null ? "Bugün net " + hdur(work) + " çalıştın."
-        : (f < 0 ? "Şu ana kadar net " + hdur(work) + ", hedefe " + hdur(-f) + " kaldı." : "Hedefi geçtin, şu ana kadar net " + hdur(work) + ".");
-    } else {
-      if (diffEl) { diffEl.textContent = "–"; diffEl.className = "diff"; }
-      $("worked").textContent = "Gelince \u201cİşe geldim\u201d butonuna bas.";
-    }
-    $("todayTL").innerHTML = timelineHtml(today, t, now, true, state.open && dayKey(state.open) === today ? state.open : null);
+    // break card
+    $("brkTotal").textContent = dk(Math.max(0, breakSum(today, x, now) + (state.open ? openBreakCount(now) : 0)));
     if (state.open) $("timer").textContent = clockFmt(now - state.open);
+
+    // summary
+    let fW = 0, fM = 0, fA = 0, bW = 0, bM = 0, bA = 0;
+    const vc = { W:[0,0], M:[0,0], A:[0,0] };
+    for (const k in state.days) {
+      const y = state.days[k], ks = keyStart(k);
+      if (complete(y)) { const df = dayFark(k, y, now); fA += df; if (ks >= monthStart) fM += df; if (ks >= weekStart) fW += df; }
+      y.breaks.forEach(b => { const c = Math.max(0, bCount(k, y, b, now)); bA += c; if (b.s >= monthStart) bM += c; if (b.s >= weekStart) bW += c; });
+      if (y.segs.length) {
+        const vv = violations(k, y, now), n = vv.length, m = vv.reduce((t, g) => t + g.e - g.s, 0);
+        vc.A[0] += n; vc.A[1] += m; if (ks >= monthStart) { vc.M[0] += n; vc.M[1] += m; } if (ks >= weekStart) { vc.W[0] += n; vc.W[1] += m; }
+      }
+    }
+    if (state.open) { const c = openBreakCount(now); bA += c; if (state.open >= monthStart) bM += c; if (state.open >= weekStart) bW += c; }
+    [["fW",fW],["fM",fM],["fA",fA]].forEach(([id, val]) => { const el = $(id); el.textContent = signed(val); el.className = cls(val); });
+    [["bW",bW],["bM",bM],["bA",bA]].forEach(([id, val]) => { $(id).textContent = hdur(val); });
+    [["vW","W"],["vM","M"],["vA","A"]].forEach(([id, key]) => {
+      const [n, m] = vc[key]; const el = $(id);
+      el.innerHTML = n + (n ? "<small>" + hdur(m) + "</small>" : ""); el.className = n ? "minus" : "";
+    });
+  }
+  function openBreakCount(now){
+    const k = dayKey(state.open), x = state.days[k] || blank();
+    return Math.max(0, (now - state.open) - ovLen(state.open, now, excluded(k, x, now)));
   }
 
   function render(){
     const now = Date.now(), today = dayKey(now);
-    const t = state.days[today] || { breaks:[], in:null, out:null };
+    const x = state.days[today] || blank();
+    const cur = curSeg(), we = isOff(today, x);
     $("todayLabel").textContent = dateLabel(today);
 
-    const ae = document.activeElement;
-    if (!(ae && ae.closest && ae.closest("#todayIO")))
-      $("todayIO").innerHTML = '<div class="io">' + fieldHtml(today, t, "in", "Giriş") + fieldHtml(today, t, "out", "Çıkış") +
-        '</div><div class="diffrow"><span class="lbl">Bugünkü fark</span><span class="diff" id="todayDiff">–</span></div>';
-
     const pill = $("pill"), pt = $("pillText");
-    if (state.open) { pill.className = "pill break"; pt.textContent = "Moladasın"; }
-    else if (t.in == null) { pill.className = "pill"; pt.textContent = "Henüz giriş yok"; }
-    else if (t.out == null) { pill.className = "pill work"; pt.textContent = "Mesaidesin"; }
-    else { pill.className = "pill done"; pt.textContent = "Mesai bitti"; }
+    if (state.open) { pill.className = "pill b"; pt.textContent = "Moladasın"; }
+    else if (cur && cur.t === "o") { pill.className = "pill o"; pt.textContent = "Ofistesin"; }
+    else if (cur && cur.t === "g") { pill.className = "pill g"; pt.textContent = "Dış görevdesin"; }
+    else if (x.segs.length) { pill.className = "pill done"; pt.textContent = "Mesai bitti"; }
+    else { pill.className = "pill"; pt.textContent = we ? offLabel(today, x) : "Henüz giriş yok"; }
 
-    const dayBtn = $("dayBtn");
-    if (t.in == null) { dayBtn.hidden = false; dayBtn.textContent = "İşe geldim"; dayBtn.className = "btn"; }
-    else if (t.out == null) { dayBtn.hidden = false; dayBtn.textContent = "İşten çıktım"; dayBtn.className = "btn ghost"; }
-    else dayBtn.hidden = true;
+    // main buttons
+    const A = $("btnA"), B = $("btnB");
+    const setBtn = (el, act, text, extra) => {
+      if (el.dataset.armed === "1") return;
+      el.dataset.act = act; el.textContent = text; el.className = "btn" + (extra ? " " + extra : ""); el.hidden = !act;
+    };
+    if (!cur && x.segs.length) {
+      setBtn(A, "", ""); setBtn(B, "", "");          // day closed: corrections only via today's records
+    } else if (!cur) {
+      setBtn(A, "office", "İşe geldim");
+      setBtn(B, "task", "Dış görevdeyim", "ghost");
+    } else if (cur.t === "o") {
+      setBtn(A, "end", "İşten çıktım");
+      setBtn(B, "task", "Dış göreve çıktım", "ghost");
+    } else {
+      setBtn(A, "office", "Ofise geldim");
+      setBtn(B, "end", "Dış görevi bitirdim, günü kapat", "ghost");
+    }
 
+    // break card
+    const inOffice = !!(cur && cur.t === "o");
     const open = !!state.open;
     $("brk").classList.toggle("out", open);
     $("brkIdle").hidden = open; $("brkOut").hidden = !open;
+    $("punch").disabled = !inOffice;
+    $("brkHint").hidden = open || inOffice;
     if (open) $("since").textContent = "Moladasın, çıkış " + hm(state.open);
 
-    const tl = t.breaks.slice().sort((a,b) => a.s - b.s);
-    $("today").innerHTML = tl.length ? rowsHtml(today, tl) : '<p class="empty">Bugün henüz mola kaydı yok.</p>';
+    // today editor
+    const ae = document.activeElement;
+    if (!(ae && ae.closest && ae.closest("#todayEd"))) $("todayEd").innerHTML = editorHtml(today, x, now);
 
-    const openSet = new Set([...document.querySelectorAll("#past details[open]")].map(x => x.dataset.k));
-    const past = Object.keys(state.days).filter(k => k !== today && !isEmpty(state.days[k])).sort().reverse();
+    // past
+    const openSet = new Set([...document.querySelectorAll("#past details[open]")].map(d => d.dataset.k));
+    const focusedPast = ae && ae.closest && ae.closest("#past details");
+    const past = Object.keys(state.days).filter(k => k < today && !isEmpty(state.days[k])).sort().reverse();
+    const future = Object.keys(state.days).filter(k => k > today && !isEmpty(state.days[k])).sort();
+    $("future").innerHTML = future.length ? "<h3>Planlanan</h3>" + '<ul class="list">' + future.map(k =>
+      '<li class="vrow"><span class="dot t-' + typeOf(state.days[k]) + '"></span><span class="range">' + dateLabel(k, { day:"numeric", month:"long", weekday:"short" }) +
+      '<small class="ln">' + TYPES[typeOf(state.days[k])] + '</small></span><button class="del" type="button" data-unmark="' + k + '">Kaldır</button></li>').join("") + "</ul>" : "";
     $("pastH").hidden = !past.length;
-    let lastMonth = "";
-    $("past").innerHTML = past.map(k => {
-      let head = "";
-      const mk = k.slice(0, 7);
-      if (mk !== lastMonth) {
-        lastMonth = mk;
-        const mDays = past.filter(x => x.slice(0, 7) === mk);
-        let mf = 0, mb = 0, done = 0;
-        mDays.forEach(x => { const y = state.days[x]; mb += breakSum(y); if (y.in != null && y.out != null) { mf += dayFark(x, y); done++; } });
-        const [yy, mm] = mk.split("-").map(Number);
-        head = '<div class="mh"><b>' + new Date(yy, mm - 1, 1).toLocaleDateString("tr-TR", { month:"long", year:"numeric" }) + "</b><span>" +
-          (done ? 'Fark <span class="' + cls(mf) + '">' + signed(mf) + "</span>, " : "") + "mola " + hdur(mb) + "</span></div>";
-      }
-      return head + pastCard(k);
-    }).join("");
-    function pastCard(k){
-      const x = state.days[k], l = x.breaks.slice().sort((a,b) => a.s - b.s), bs = breakSum(x);
-      let f = '<span class="f">–</span>', span = "Giriş/çıkış eksik";
-      if (x.in != null && x.out != null) { const v = dayFark(k, x); f = '<span class="f ' + cls(v) + '">' + signed(v, short) + "</span>"; span = hm(x.in) + " – " + hm(x.out); }
-      else if (x.in != null) span = hm(x.in) + " – çıkış eksik";
-      const mini = x.in != null && x.out != null ? '<div class="tl mini">' + timelineHtml(k, x, now, false, null) + "</div>" : "";
-      return '<details class="card" data-k="' + k + '"' + (openSet.has(k) ? " open" : "") + '><summary>' +
-        '<div class="sh"><span class="d">' + dateLabel(k, { day:"numeric", month:"long", weekday:"short" }) + "</span>" + f + "</div>" +
-        '<div class="sm"><span>' + span + "</span><span>" + l.length + " mola, " + mins(bs) + " dk</span></div>" + mini + "</summary>" +
-        '<div class="pastbody"><div class="io">' + fieldHtml(k, x, "in", "Giriş") + fieldHtml(k, x, "out", "Çıkış") + "</div>" +
-        (l.length ? rowsHtml(k, l) : '<p class="empty">Mola kaydı yok.</p>') + "</div></details>";
+    let pending = 0;
+    if (!focusedPast) {
+      let lastMonth = "";
+      $("past").innerHTML = past.map(k => {
+        let head = "";
+        const mk = k.slice(0, 7);
+        if (mk !== lastMonth) {
+          lastMonth = mk;
+          let mf = 0, mb = 0, done = 0, mv = 0;
+          past.filter(z => z.slice(0, 7) === mk).forEach(z => {
+            const y = state.days[z]; mb += breakSum(z, y, now);
+            if (complete(y)) { mf += dayFark(z, y, now); done++; }
+            mv += violations(z, y, now).length;
+          });
+          const [yy, mm] = mk.split("-").map(Number);
+          head = '<div class="mh"><b>' + new Date(yy, mm - 1, 1).toLocaleDateString("tr-TR", { month:"long", year:"numeric" }) + "</b><span>" +
+            (done ? 'Fark <span class="' + cls(mf) + '">' + signed(mf) + "</span>, " : "") + "mola " + hdur(mb) + (mv ? ', <span class="minus">' + mv + " ihlal</span>" : "") + "</span></div>";
+        }
+        return head + pastCard(k, now, openSet.has(k));
+      }).join("");
     }
+    past.forEach(k => { const y = state.days[k]; if (!y.izin && violations(k, y, now).length) pending++; });
+    const al = $("alert");
+    al.hidden = !pending;
+    if (pending) al.textContent = pending + " günde mazeret izni girilmemiş çekirdek saat ihlali var. Görmek için dokun.";
 
-    const ti = $("target"); if (document.activeElement !== ti) ti.value = String(state.target / 60);
-    if (document.activeElement !== $("lunchS")) $("lunchS").value = minToHm(state.lunchS);
-    if (document.activeElement !== $("lunchE")) $("lunchE").value = minToHm(state.lunchE);
+    // settings
+    ["mesaiS","mesaiE","coreS","coreE","lunchS","lunchE"].forEach(id => { const el = $(id); if (document.activeElement !== el) el.value = mHm(S()[id]); });
+    $("setInfo").textContent = "Hafta içi net hedef " + hdur((S().mesaiE - S().mesaiS) * MIN - lunchLen()) + ". Çekirdek saat dışındaki eksikler başka gün tamamlanabilir, çekirdek saat içindeki eksikler ihlal sayılır.";
     renderLive();
   }
 
-  // ---------- in-page confirm & messages ----------
-  let toastTimer = 0;
-  function toast(msg){
-    const el = $("toast"); el.textContent = msg; el.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3500);
+  function pastCard(k, now, isOpen){
+    const x = state.days[k], br = x.breaks.length, bs = breakSum(k, x, now);
+    const segs = x.segs.slice().sort((a, b) => a.s - b.s);
+    let f = '<span class="f">–</span>', span = "Kayıt eksik";
+    if (complete(x)) { const v = dayFark(k, x, now); f = '<span class="f ' + cls(v) + '">' + signed(v) + "</span>"; span = segs.length ? hm(segs[0].s) + " – " + hm(Math.max(...segs.map(s => s.e))) : "Çalışma yok"; }
+    else if (segs.length) span = hm(segs[0].s) + " – çıkış eksik";
+    const vv = violations(k, x, now), vm = vv.reduce((t, g) => t + g.e - g.s, 0);
+    let tags = "";
+    if (typeOf(x) !== "normal") tags += '<span class="tag t-' + typeOf(x) + '">' + TYPES[typeOf(x)] + "</span>";
+    else if (isWE(k)) tags += '<span class="tag we">Hafta sonu</span>';
+    if (segs.some(s => s.t === "g")) tags += '<span class="tag g">Dış görev</span>';
+    if (vv.length) tags += x.izin ? '<span class="tag ok">İhlal ' + hdur(vm) + ", izin girildi</span>" : '<span class="tag v">İhlal ' + hdur(vm) + ", izin yok</span>";
+    const mini = complete(x) && segs.length ? '<div class="tl mini">' + timelineHtml(k, x, now, false) + "</div>" : "";
+    return '<details class="card" data-k="' + k + '"' + (isOpen ? " open" : "") + "><summary>" +
+      '<div class="sh"><span class="d">' + dateLabel(k, { day:"numeric", month:"long", weekday:"short" }) + "</span>" + f + "</div>" +
+      '<div class="sm"><span>' + span + "</span><span>" + (br ? br + " mola, " + hdur(bs) : "mola yok") + "</span></div>" +
+      (tags ? '<div class="tags">' + tags + "</div>" : "") + mini + "</summary>" +
+      '<div class="ed">' + editorHtml(k, x, now) + "</div></details>";
   }
+
+  // ---------- messages & confirm ----------
+  let toastTimer = 0;
+  function toast(msg){ const el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
   function arm(btn, label, action){
     if (btn.dataset.armed === "1") { clearTimeout(Number(btn.dataset.timer)); btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = btn.dataset.orig; action(); return; }
     btn.dataset.orig = btn.textContent; btn.dataset.armed = "1"; btn.classList.add("armed"); btn.textContent = label;
-    btn.dataset.timer = String(setTimeout(() => { btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = btn.dataset.orig; }, 3000));
+    btn.dataset.timer = String(setTimeout(() => { btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = btn.dataset.orig; }, 3500));
   }
 
   // ---------- actions ----------
   const buzz = () => { if (navigator.vibrate) try { navigator.vibrate(30); } catch(e){} };
   let lock = 0;
-  const debounce = () => { const n = Date.now(); if (n - lock < 800) return false; lock = n; return true; };
+  const debounce = () => { const n = Date.now(); if (n - lock < 700) return false; lock = n; return true; };
   function closeBreak(now){
-    if (!state.open) return null;
-    const s = state.open, key = dayKey(s);
-    state.open = null; getDay(key).breaks.push({ s, e: now });
-    return key;
+    if (!state.open) return;
+    const s = state.open, k = dayKey(s); state.open = null;
+    getDay(k).breaks.push({ s, e: now }); writeDay(k); writeOpen();
   }
-
-  $("dayBtn").addEventListener("click", () => {
-    if (!debounce()) return; buzz();
-    const now = Date.now(), key = dayKey(now), d = getDay(key);
-    if (d.in == null) { d.in = now; writeDay(key); toast("Giriş " + hm(now) + " olarak kaydedildi."); }
-    else if (d.out == null) {
-      const bk = closeBreak(now);
-      d.out = now;
-      writeDay(key); if (bk && bk !== key) writeDay(bk); if (bk) writeOpen();
-      toast("Çıkış " + hm(now) + " olarak kaydedildi.");
+  function startSeg(t, now){
+    const k = dayKey(now), d = getDay(k), c = d.segs.find(s => s.e == null);
+    if (c && c.t === t) return;
+    if (t === "g") closeBreak(now);
+    if (c) c.e = now;
+    d.segs.push({ t, s: now, e: null }); writeDay(k);
+    toast((t === "g" ? "Dış görev " : "Ofis girişi ") + hm(now) + " olarak kaydedildi.");
+  }
+  function endDay(now){
+    const k = dayKey(now), d = getDay(k), c = d.segs.find(s => s.e == null);
+    if (!c) return;
+    closeBreak(now); c.e = now; writeDay(k);
+    toast("Çıkış " + hm(now) + " olarak kaydedildi.");
+  }
+  function onMain(e){
+    const btn = e.currentTarget, act = btn.dataset.act, now = Date.now(), k = dayKey(now);
+    if (act === "end" && !isOff(k, state.days[k]) && S().coreE != null && now < at(k, S().coreE)) {
+      arm(btn, "Çekirdek saat " + mHm(S().coreE) + "'a kadar, ihlal olur. Yine de çık", () => { buzz(); endDay(Date.now()); render(); });
+      return;
     }
+    if (!debounce()) return; buzz();
+    if (act === "office") startSeg("o", now);
+    else if (act === "task") startSeg("g", now);
+    else if (act === "end") endDay(now);
     render();
-  });
+  }
+  $("btnA").addEventListener("click", onMain);
+  $("btnB").addEventListener("click", onMain);
+
   $("punch").addEventListener("click", () => {
-    if (!debounce() || state.open) return; buzz();
+    const c = curSeg();
+    if (!c || c.t !== "o" || state.open || !debounce()) return; buzz();
     state.open = Date.now(); writeOpen(); render();
   });
   $("punchIn").addEventListener("click", () => {
-    if (!debounce() || !state.open) return; buzz();
-    const now = Date.now(), s = state.open, key = closeBreak(now);
-    writeDay(key); writeOpen(); render(); toast("Mola " + dk(now - s) + " olarak kaydedildi.");
+    if (!state.open || !debounce()) return; buzz();
+    const now = Date.now(), s = state.open; closeBreak(now); render();
+    toast("Mola " + dk(now - s) + " olarak kaydedildi.");
   });
   $("cancel").addEventListener("click", () => {
     if (!state.open) return;
     arm($("cancel"), "Silmek için tekrar bas", () => { state.open = null; writeOpen(); render(); toast("Mola kaydı iptal edildi."); });
   });
+  $("alert").addEventListener("click", () => {
+    const now = Date.now();
+    document.querySelectorAll("#past details").forEach(d => { const y = state.days[d.dataset.k]; if (y && !y.izin && violations(d.dataset.k, y, now).length) d.open = true; });
+    const first = [...document.querySelectorAll("#past details[open]")][0];
+    if (first) first.scrollIntoView({ behavior:"smooth", block:"start" });
+  });
 
   document.addEventListener("click", e => {
-    const btn = e.target.closest(".del"); if (!btn) return;
-    const k = btn.dataset.k, i = Number(btn.dataset.i), d = state.days[k]; if (!d) return;
-    const target = d.breaks.slice().sort((a,b) => a.s - b.s)[i]; if (!target) return;
-    arm(btn, "Emin misin?", () => {
-      d.breaks = d.breaks.filter(b => !(b.s === target.s && b.e === target.e));
-      writeDay(k); render(); toast(hm(target.s) + " – " + hm(target.e) + " molası silindi.");
-    });
+    const t = e.target.closest("button"); if (!t) return;
+    const now = Date.now();
+    if (t.dataset.delseg) {
+      const k = t.dataset.delseg, i = Number(t.dataset.i), d = state.days[k]; if (!d || !d.segs[i]) return;
+      arm(t, "Emin misin?", () => { d.segs.splice(i, 1); writeDay(k); render(); toast("Kayıt silindi."); });
+    } else if (t.dataset.delbr) {
+      const k = t.dataset.delbr, s0 = Number(t.dataset.s), d = state.days[k]; if (!d) return;
+      arm(t, "Emin misin?", () => { d.breaks = d.breaks.filter(b => b.s !== s0); writeDay(k); render(); toast("Mola silindi."); });
+    } else if (t.dataset.add) {
+      const k = t.dataset.add, row = document.querySelector('[data-addrow="' + k + '"]');
+      const [sel, i1, i2] = row.querySelectorAll("select,input");
+      const a = hmToM(i1.value), b = hmToM(i2.value);
+      if (a == null || b == null) { toast("Başlangıç ve bitiş saatini gir."); return; }
+      if (b <= a) { toast("Bitiş başlangıçtan sonra olmalı."); return; }
+      getDay(k).segs.push({ t: sel.value, s: at(k, a), e: at(k, b) }); writeDay(k);
+      document.activeElement && document.activeElement.blur && document.activeElement.blur();
+      render(); toast((sel.value === "g" ? "Dış görev" : "Ofis") + " kaydı eklendi.");
+    } else if (t.dataset.fullg) {
+      const k = t.dataset.fullg;
+      getDay(k).segs.push({ t:"g", s: at(k, S().mesaiS), e: at(k, S().mesaiE) }); writeDay(k);
+      render(); toast("Tüm gün dış görev eklendi (" + mHm(S().mesaiS) + " – " + mHm(S().mesaiE) + ").");
+    } else if (t.dataset.unmark) {
+      const k = t.dataset.unmark, d = state.days[k]; if (!d) return;
+      d.type = "normal"; writeDay(k); render(); toast("İşaret kaldırıldı.");
+    } else if (t.dataset.izin) {
+      const k = t.dataset.izin, d = getDay(k); d.izin = !d.izin; writeDay(k);
+      render(); toast(d.izin ? "Mazeret izni girildi olarak işaretlendi." : "Mazeret izni işareti kaldırıldı.");
+    }
   });
 
   document.addEventListener("change", e => {
     const inp = e.target;
-    if (inp.id === "target") {
-      const h = parseFloat(String(inp.value).replace(",", "."));
-      if (!(h >= 1 && h <= 16)) { inp.value = String(state.target / 60); toast("1 ile 16 saat arasında bir değer gir."); return; }
-      state.target = Math.round(h * 60); writeSettings(); render(); return;
+    if (inp.dataset.set) {
+      const g = inp.dataset.set, sM = hmToM($(g + "S").value), eM = hmToM($(g + "E").value);
+      if (g === "lunch" && sM == null && eM == null) { state.set.lunchS = null; state.set.lunchE = null; writeSettings(); render(); toast("Yemek arası kaldırıldı."); return; }
+      if (sM == null || eM == null) return;
+      if (eM <= sM) { toast("Bitiş başlangıçtan sonra olmalı."); render(); return; }
+      state.set[g + "S"] = sM; state.set[g + "E"] = eM; writeSettings(); inp.blur(); render(); toast("Ayar kaydedildi."); return;
     }
-    if (inp.id === "lunchS" || inp.id === "lunchE") {
-      const toM = v => { if (!v) return null; const [h, m] = v.split(":").map(Number); return h * 60 + m; };
-      const sM = toM($("lunchS").value), eM = toM($("lunchE").value);
-      if ((sM == null) !== (eM == null)) return;            // wait until both are set (or both cleared)
-      if (sM != null && eM <= sM) { toast("Yemek arası bitişi başlangıçtan sonra olmalı."); render(); return; }
-      state.lunchS = sM; state.lunchE = eM; writeSettings(); inp.blur(); render();
-      toast(sM == null ? "Yemek arası kaldırıldı." : "Yemek arası " + minToHm(sM) + " – " + minToHm(eM) + " olarak kaydedildi.");
-      return;
+    if (inp.dataset.type) {
+      const k = inp.dataset.type, d = getDay(k); d.type = TYPES[inp.value] ? inp.value : "normal";
+      writeDay(k); inp.blur(); render(); toast(dateLabel(k, { day:"numeric", month:"long" }) + ": " + TYPES[typeOf(d)]); return;
     }
-    if (!inp.dataset || !inp.dataset.f) return;
-    const k = inp.dataset.k, f = inp.dataset.f, d = getDay(k);
-    let ms = null;
-    if (inp.value) { const [h, m] = inp.value.split(":").map(Number); ms = keyStart(k) + (h * 60 + m) * 60000; }
-    const other = f === "in" ? d.out : d.in;
-    if (ms != null && other != null && (f === "in" ? ms > other : ms < other)) {
-      toast("Çıkış saati giriş saatinden önce olamaz."); inp.blur(); render(); return;
+    if (inp.dataset.f && inp.dataset.k) {
+      const k = inp.dataset.k, i = Number(inp.dataset.i), d = state.days[k]; if (!d || !d.segs[i]) return;
+      const seg = d.segs[i], m = hmToM(inp.value);
+      if (inp.dataset.f === "s") {
+        if (m == null) { render(); return; }
+        const ms = at(k, m); if (seg.e != null && ms >= seg.e) { toast("Başlangıç bitişten önce olmalı."); render(); return; }
+        seg.s = ms;
+      } else {
+        if (m == null) { seg.e = null; }
+        else { const ms = at(k, m); if (ms <= seg.s) { toast("Bitiş başlangıçtan sonra olmalı."); render(); return; } seg.e = ms; }
+        if (seg.e == null && d.segs.some((s, j) => j !== i && s.e == null)) { toast("Aynı anda sadece bir açık kayıt olabilir."); seg.e = seg.s + MIN; }
+      }
+      writeDay(k); inp.blur(); render();
     }
-    d[f] = ms; writeDay(k); inp.blur(); render();
   });
 
+  // ---------- export / import ----------
   $("export").addEventListener("click", async () => {
-    const keys = Object.keys(state.days).sort();
-    const c = n => n.toFixed(0);
-    const lines = ["Tarih;Giriş;Çıkış;Net çalışılan (dk);Fark (dk);Mola sayısı;Mola (dk)"];
-    let fTot = 0, bTot = 0;
+    const now = Date.now(), keys = Object.keys(state.days).sort(), c = n => n.toFixed(0);
+    const list = (x, t) => x.segs.filter(s => s.t === t).sort((a, b) => a.s - b.s).map(s => hm(s.s) + "-" + (s.e != null ? hm(s.e) : "")).join(" | ");
+    const lines = ["Tarih;Gün;Gün türü;Ofis;Dış görev;Net çalışılan (dk);Fark (dk);Mola sayısı;Mola (dk);Çekirdek ihlal sayısı;Çekirdek ihlal (dk);Mazeret izni"];
+    let fT = 0, bT = 0, vT = 0, vN = 0;
     keys.forEach(k => {
-      const x = state.days[k], bs = breakSum(x) / 60000; bTot += bs;
+      const x = state.days[k], bs = breakSum(k, x, now) / MIN; bT += bs;
       let w = "", f = "";
-      if (x.in != null && x.out != null) { const wm = netWork(k, x.in, x.out) / 60000; w = c(wm); const fm = dayFark(k, x) / 60000; f = c(fm); fTot += fm; }
-      lines.push([k, x.in != null ? hm(x.in) : "", x.out != null ? hm(x.out) : "", w, f, x.breaks.length, c(bs)].join(";"));
+      if (complete(x)) { w = c(netWork(k, x, now) / MIN); const fm = dayFark(k, x, now) / MIN; f = c(fm); fT += fm; }
+      const vv = violations(k, x, now), vm = vv.reduce((t, g) => t + g.e - g.s, 0) / MIN; vT += vm; vN += vv.length;
+      lines.push([k, new Date(keyStart(k)).toLocaleDateString("tr-TR", { weekday:"long" }), typeOf(x) === "normal" ? "" : TYPES[typeOf(x)], list(x, "o"), list(x, "g"), w, f, x.breaks.length, c(bs), vv.length, c(vm), x.izin ? "Evet" : ""].join(";"));
     });
-    lines.push(["Toplam", "", "", "", c(fTot), "", c(bTot)].join(";"));
+    lines.push(["Toplam", "", "", "", "", "", c(fT), "", c(bT), vN, c(vT), ""].join(";"));
     lines.push("", "Molalar", "Tarih;Çıkış;Giriş;Süre (dk);Sayılan (dk)");
-    keys.forEach(k => state.days[k].breaks.slice().sort((a,b) => a.s - b.s).forEach(b =>
-      lines.push([k, hm(b.s), hm(b.e), ((b.e - b.s) / 60000).toFixed(1).replace(".", ","), (bCount(b.s, b.e) / 60000).toFixed(1).replace(".", ",")].join(";"))));
-    const csv = "\ufeff" + lines.join("\r\n");
-    const name = "mesai-mola-" + dayKey(Date.now()) + ".csv";
+    keys.forEach(k => { const x = state.days[k]; x.breaks.slice().sort((a, b) => a.s - b.s).forEach(b =>
+      lines.push([k, hm(b.s), hm(b.e), ((b.e - b.s) / MIN).toFixed(1).replace(".", ","), (Math.max(0, bCount(k, x, b, now)) / MIN).toFixed(1).replace(".", ",")].join(";"))); });
+    const csv = "\ufeff" + lines.join("\r\n"), name = "mesai-takip-" + dayKey(now) + ".csv";
     let dl = null;
     try { if (window.claude && window.claude.use) dl = await window.claude.use("downloads"); } catch(e){}
-    if (dl) {
-      try { await dl.save({ filename:name, data:csv }); return; }
-      catch(err) { if (err && err.code === "declined") return; }
-    }
+    if (dl) { try { await dl.save({ filename:name, data:csv }); return; } catch(err) { if (err && err.code === "declined") return; } }
     if (window.top === window) {
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })); a.download = name;
-      document.body.appendChild(a); a.click();
-      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv;charset=utf-8" })); a.download = name;
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
       toast("Yedek dosyası indirildi."); return;
     }
     try { await navigator.clipboard.writeText(csv); toast("Kayıtlar panoya kopyalandı."); } catch(e) { toast("İndirme bu görünümde kullanılamıyor."); }
   });
 
   function importCsv(text){
-    const touched = new Set(); let section = "days";
-    const toMs = (k, t) => { const m = /^(\d{1,2}):(\d{2})$/.exec((t || "").trim()); return m ? keyStart(k) + (Number(m[1]) * 60 + Number(m[2])) * 60000 : null; };
+    const touched = new Set(); let section = "days", idx = null;
+    const toMs = (k, t) => { const m = /^(\d{1,2}):(\d{2})$/.exec((t || "").trim()); return m ? at(k, Number(m[1]) * 60 + Number(m[2])) : null; };
+    const parseList = (k, str, t) => (str || "").split("|").map(p => p.trim()).filter(Boolean).map(p => {
+      const [a, b] = p.split("-"); const s = toMs(k, a), e = toMs(k, b); return s == null ? null : { t, s, e: e != null && e > s ? e : null };
+    }).filter(Boolean);
     text.replace(/^\ufeff/, "").split(/\r?\n/).forEach(line => {
+      const c = line.split(";"), head = (c[0] || "").trim();
       if (line.trim() === "Molalar") { section = "breaks"; return; }
-      const c = line.split(";"); const k = (c[0] || "").trim();
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
-      const d = getDay(k);
-      if (section === "days") {
-        const i = toMs(k, c[1]), o = toMs(k, c[2]);
-        if (d.in == null && i != null) d.in = i;
-        if (d.out == null && o != null && (d.in == null || o >= d.in)) d.out = o;
-      } else {
+      if (head === "Tarih" && section === "days") { idx = {}; c.forEach((n, i) => { idx[n.trim()] = i; }); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(head)) return;
+      const k = head, d = getDay(k);
+      const has = s => d.segs.some(z => Math.abs(z.s - s.s) < MIN && z.t === s.t);
+      if (section === "days" && idx) {
+        let segs = [];
+        if (idx["Ofis"] != null) segs = segs.concat(parseList(k, c[idx["Ofis"]], "o"));
+        if (idx["Dış görev"] != null) segs = segs.concat(parseList(k, c[idx["Dış görev"]], "g"));
+        if (idx["Giriş"] != null) { const s = toMs(k, c[idx["Giriş"]]), e = toMs(k, c[idx["Çıkış"]]); if (s != null) segs.push({ t:"o", s, e: e != null && e > s ? e : null }); }
+        segs.forEach(s => { if (!has(s)) d.segs.push(s); });
+        if (idx["Gün türü"] != null) { const lbl = (c[idx["Gün türü"]] || "").trim(); const t = Object.keys(TYPES).find(z => TYPES[z] === lbl); if (t && t !== "normal") d.type = t; }
+        if (idx["Mazeret izni"] != null && (c[idx["Mazeret izni"]] || "").trim() === "Evet") d.izin = true;
+      } else if (section === "breaks") {
         const s0 = toMs(k, c[1]), e0 = toMs(k, c[2]);
-        if (s0 != null && e0 != null && e0 >= s0 && !d.breaks.some(b => Math.abs(b.s - s0) < 60000)) d.breaks.push({ s:s0, e:e0 });
+        if (s0 != null && e0 != null && e0 >= s0 && !d.breaks.some(b => Math.abs(b.s - s0) < MIN)) d.breaks.push({ s:s0, e:e0 });
       }
       touched.add(k);
     });
     touched.forEach(writeDay);
     return touched.size;
   }
+  $("markBtn").addEventListener("click", () => {
+    const a = $("markS").value, b = $("markE").value || $("markS").value, t = $("markT").value;
+    if (!a) { toast("Başlangıç tarihini seç."); return; }
+    if (b < a) { toast("Bitiş başlangıçtan önce olamaz."); return; }
+    const keys = [];
+    for (let ms = keyStart(a); ms <= keyStart(b); ms += 86400000) {
+      const k = dayKey(ms + 3600000); if (keys.includes(k)) continue;
+      if (a !== b && isWE(k)) continue;
+      keys.push(k);
+    }
+    if (keys.length > 60) { toast("En fazla 60 gün işaretlenebilir."); return; }
+    keys.forEach(k => { getDay(k).type = t; writeDay(k); });
+    $("markS").value = ""; $("markE").value = "";
+    render(); toast(keys.length + " gün " + TYPES[t].toLocaleLowerCase("tr-TR") + " olarak işaretlendi.");
+  });
   $("importBtn").addEventListener("click", () => $("importFile").click());
   $("importFile").addEventListener("change", async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
@@ -617,11 +931,13 @@ summary::-webkit-details-marker{display:none}
     e.target.value = "";
   });
 
-  $("note").textContent = LOCAL_NOTE;
+  $("note").textContent = DEMO ? "Demo modu: kayıtlar örnek veridir, sayfa yenilenince sıfırlanır." : LOCAL_NOTE;
+  if (DEMO) { const b = document.createElement("p"); b.className = "demo"; b.textContent = "Demo modu: son 2 haftanın örnek verileri yüklü. Butonlara basıp deneyebilirsin."; document.querySelector("main").insertBefore(b, $("alert")); }
   setInterval(renderLive, 1000);
+  setInterval(() => { const ae = document.activeElement; if (!(ae && ae.closest && ae.closest(".ed,.settings"))) render(); }, 60000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
   render();
-  connect();
+  if (!DEMO) connect();
 })();
 </script>
 </body>
