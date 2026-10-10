@@ -566,7 +566,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   const at = (k, m) => keyStart(k) + m * MIN;
   const hm = ms => { const d = new Date(ms); return pad(d.getHours()) + ":" + pad(d.getMinutes()); };
   const mHm = m => m == null ? "" : pad(Math.floor(m/60)) + ":" + pad(m % 60);
-  const hmToM = v => { if (!v) return null; const [h, m] = v.split(":").map(Number); return h * 60 + m; };
+  const hmToM = v => { const hit = /^(\d{1,2}):(\d{2})$/.exec((v || "").trim()); if (!hit) return null; const h = Number(hit[1]), m = Number(hit[2]); return h < 24 && m < 60 ? h * 60 + m : null; };
+  const validDayKey = k => { if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return false; return dayKey(keyStart(k)) === k; };
   const mins = ms => Math.round(ms / MIN);
   const dk = ms => ms < MIN && ms > 0 ? "<1 dk" : mins(ms) + " dk";
   const hdur = ms => { const m = Math.abs(mins(ms)); return m >= 60 ? Math.floor(m/60) + " sa" + (m%60 ? " " + (m%60) + " dk" : "") : m + " dk"; };
@@ -632,9 +633,22 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   const complete = x => x.segs.length > 0 ? x.segs.every(s => s.e != null) : typeOf(x) !== "normal";
   const dayFark = (k, x, now) => netWork(k, x, now) - targetNet(k, x);
   function excluded(k, x, now){ return merge(lunchWin(k).concat(resolved(k, x, now).filter(s => s.t === "g"))); }
-  const bCount = (k, x, b, now) => (b.e - b.s) - ovLen(b.s, b.e, excluded(k, x, now));
-  const breakSum = (k, x, now) => x.breaks.reduce((t, b) => t + bCount(k, x, b, now), 0);
-  const wcSum = (k, x, now) => x.breaks.reduce((t, b) => t + (b.wc ? bCount(k, x, b, now) : 0), 0);
+  function countedBreaks(k, x, list, now){
+    const spans = subtract(merge(list), excluded(k, x, now));
+    // Old break-only records have no location data; keep their historical totals readable.
+    if (!x.segs.length) return spans;
+    const office = merge(resolved(k, x, now).filter(s => s.t === "o"));
+    return merge(spans.flatMap(b => office.map(o => ({ s:Math.max(b.s, o.s), e:Math.min(b.e, o.e) }))));
+  }
+  const spanSum = spans => spans.reduce((t, b) => t + b.e - b.s, 0);
+  const bCount = (k, x, b, now) => spanSum(countedBreaks(k, x, [b], now));
+  const breakSum = (k, x, now) => spanSum(countedBreaks(k, x, x.breaks, now));
+  const wcSum = (k, x, now) => spanSum(countedBreaks(k, x, x.breaks.filter(b => b.wc), now));
+  function liveBreakTotals(k, x, now){
+    const list = x.breaks.slice();
+    if (state.open && dayKey(state.open) === k) list.push({ s:state.open, e:now, wc:state.openWc });
+    return { total:spanSum(countedBreaks(k, x, list, now)), wc:spanSum(countedBreaks(k, x, list.filter(b => b.wc), now)) };
+  }
   // "34 dk" plus a small "+ 💩 4 dk" line when there was a toilet break (toilet time is part of the break total)
   const brkHtml = (reg, wc) => dk(Math.max(0, reg)) + (wc > 0 ? '<small class="wcl">+ 💩 ' + dk(wc) + "</small>" : "");
 
@@ -659,6 +673,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     }
     return t + left;
   }
+  function targetMarker(k, x, now){
+    const spans = subtract(presence(k, x, now), workLunch(k, x, now));
+    let left = targetNet(k, x);
+    for (const p of spans) { if (left <= p.e - p.s) return p.s + left; left -= p.e - p.s; }
+    const segs = resolved(k, x, now);
+    return targetEndFrom(k, Math.max(...segs.map(s => s.e)), left, x, now);
+  }
 
   // ---------- timeline ----------
   function timelineHtml(k, x, now, labels){
@@ -666,7 +687,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     if (!segs.length) return labels ? '<div class="bar"></div><div class="tlab"><span>' + (isOff(k, x) ? offLabel(k, x) : mHm(S().mesaiS)) + "</span><span>" + (isOff(k, x) ? "" : mHm(S().mesaiE)) + "</span></div>" : "";
     const we = isOff(k, x);
     const first = Math.min(...segs.map(s => s.s)), last = Math.max(...segs.map(s => s.e));
-    const tMark = we ? null : targetEndFrom(k, first, targetNet(k, x), x, now);
+    const tMark = we ? null : targetMarker(k, x, now);
     let rs = first, re = last;
     if (!we) { rs = Math.min(rs, at(k, S().mesaiS)); re = Math.max(re, at(k, S().mesaiE), tMark); }
     const span = (re - rs) || 1, p = ms => Math.max(0, Math.min(100, (ms - rs) / span * 100));
@@ -746,7 +767,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     writeDay(k);
     toast((t === "g" ? "Dış görev " : "Ofis girişi ") + hm(now) + " olarak kaydedildi.");
   }
-  // manual break edits: not in the future, fully inside office records, no overlap with other breaks (or the running one)
+  // A day has one location at a time; adjacent records may share a boundary.
+  function segmentError(k, s, skip, day){
+    const others = (day || dayX(k)).segs.filter((z, i) => i !== skip);
+    if (s.e == null && others.some(z => z.e == null)) return "Aynı anda sadece bir açık kayıt olabilir.";
+    const end = s.e == null ? Infinity : s.e;
+    if (end > s.s && others.some(z => (z.e == null || z.e > z.s) && s.s < (z.e == null ? Infinity : z.e) && end > z.s)) return "Bu saatlerde başka bir ofis veya dış görev kaydı var.";
+    return "";
+  }
   function breakError(k, s, e, skip, withOpen){
     if (e <= s) return "Bitiş başlangıçtan sonra olmalı.";
     if (e > Date.now()) return "Bitiş şu andan sonra olamaz.";
@@ -827,16 +855,11 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     if ($("warn").innerHTML !== w) $("warn").innerHTML = w;
 
     $("tIn").textContent = x.segs.length ? hm(Math.min(...x.segs.map(s => s.s))) : "--:--";
-    const ob = state.open ? openBreakCount(now) : 0, wcT = wcSum(today, x, now) + (state.openWc ? ob : 0), brT = breakSum(today, x, now) + ob;
-    const bh = brkHtml(brT - wcT, wcT); if ($("tBrk").innerHTML !== bh) $("tBrk").innerHTML = bh;
+    const br = liveBreakTotals(today, x, now);
+    const bh = brkHtml(br.total - br.wc, br.wc); if ($("tBrk").innerHTML !== bh) $("tBrk").innerHTML = bh;
     const te = $("tDiff");
     if (segs.length) { te.textContent = signed(f); te.className = cls(f); } else { te.textContent = "–"; te.className = ""; }
   }
-  function openBreakCount(now){
-    const k = dayKey(state.open), x = dayX(k);
-    return Math.max(0, (now - state.open) - ovLen(state.open, now, excluded(k, x, now)));
-  }
-
   // ---------- today: actions (only on state change) ----------
   function renderActs(){
     const today = todayKey(), x = dayX(today), cur = curSeg(), off = isOff(today, x);
@@ -966,7 +989,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       const vv = violations(k, x, now); if (x.segs.length || k < today) { vN += vv.length; vM += vSum(vv); }
       if (x.segs.some(s => s.t === "g")) task++;
     });
-    if (state.open && state.open >= from) brk += openBreakCount(now);
+    if (state.open && state.open >= from) { const k = dayKey(state.open), x = dayX(k); brk += liveBreakTotals(k, x, now).total - breakSum(k, x, now); }
 
     // chart data
     let bars = [];
@@ -1193,7 +1216,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       const k = d.addsave, a = hmToM($("addS").value), b = hmToM($("addE").value);
       if (a == null || b == null) { toast("Başlangıç ve bitiş saatini gir."); return; }
       if (b <= a) { toast("Bitiş başlangıçtan sonra olmalı."); return; }
-      getDay(k).segs.push({ t:addKind, s:at(k, a), e:at(k, b) }); writeDay(k); addOpen = false;
+      const s = { t:addKind, s:at(k, a), e:at(k, b) }, err = segmentError(k, s, -1);
+      if (err) { toast(err); return; }
+      getDay(k).segs.push(s); writeDay(k); addOpen = false;
       renderSheet(); render(); toast((addKind === "g" ? "Dış görev" : "Ofis") + " kaydı eklendi."); return;
     }
     if (d.bropen) { brOpen = true; renderSheet(); return; }
@@ -1207,6 +1232,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       renderSheet(); render(); toast("Mola " + hm(s0) + " – " + hm(e0) + " eklendi."); return;
     }
     if (d.fullg) {
+      if (dayX(d.fullg).segs.length) { toast("Bu günde kayıt var. Dış görev saatlerini Kayıt ekle ile gir."); return; }
       const k = d.fullg, shorter = lunchOn() && !isOff(k, dayX(k)) ? (S().lunchE - taskLunchE()) : 0;
       getDay(k).segs.push({ t:"g", s:at(k, S().mesaiS), e:at(k, S().mesaiE - shorter) }); writeDay(k);
       renderSheet(); render(); toast("Tüm gün dış görev eklendi."); return;
@@ -1263,15 +1289,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       } else {
         const s0 = fl(state.open), err = breakError(k, s0, ms, -1, false);
         if (err) { toast(err); renderSheet(); return; }
-        const b = { s:s0, e:ms }; if (state.openWc) b.wc = true;
-        state.open = null; state.openWc = false; getDay(k).breaks.push(b); writeDay(k); writeOpen();
-        toast("Mola " + hm(s0) + " – " + hm(ms) + " olarak kaydedildi.");
+        const end = lunchCut(ms) == null ? ms : lunchCut(ms);
+        closeBreak(end);
+        toast("Mola " + hm(s0) + " – " + hm(end) + " olarak kaydedildi.");
       }
       inp.blur(); renderSheet(); render(); return;
     }
     if (inp.dataset.f && inp.dataset.k) {
       const k = inp.dataset.k, i = Number(inp.dataset.i), day = state.days[k]; if (!day || !day.segs[i]) return;
-      const seg = day.segs[i], m = hmToM(inp.value);
+      const seg = { ...day.segs[i] }, m = hmToM(inp.value);
       if (inp.dataset.f === "s") {
         if (m == null) { renderSheet(); return; }
         const ms = at(k, m); if (seg.e != null && ms >= seg.e) { toast("Başlangıç bitişten önce olmalı."); renderSheet(); return; }
@@ -1281,9 +1307,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
         else { const ms = at(k, m); if (ms <= seg.s) { toast("Bitiş başlangıçtan sonra olmalı."); renderSheet(); return; } seg.e = ms; }
         if (seg.e == null && (k !== todayKey() || day.segs.some((s, j) => j !== i && s.e == null))) {
           if (k !== todayKey()) toast("Geçmiş günlerde bitiş saati boş bırakılamaz."); else toast("Aynı anda sadece bir açık kayıt olabilir.");
-          seg.e = seg.s + MIN;
+          renderSheet(); return;
         }
       }
+      const err = segmentError(k, seg, i);
+      if (err) { toast(err); renderSheet(); return; }
+      day.segs[i] = seg;
       writeDay(k); inp.blur(); renderSheet(); render();
     }
   });
@@ -1317,24 +1346,38 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   });
 
   function importCsv(text){
-    const touched = new Set(); let section = "days", idx = null;
-    const toMs = (k, t) => { const m = /^(\d{1,2}):(\d{2})$/.exec((t || "").trim()); return m ? at(k, Number(m[1]) * 60 + Number(m[2])) : null; };
+    const pending = new Map(); let section = "days", idx = null, breakHasType = false;
+    const toMs = (k, t) => { const value = (t || "").trim(); if (!value) return null; const m = hmToM(value); if (m == null) throw new Error(k + ": geçersiz saat " + value); return at(k, m); };
     const parseList = (k, str, t) => (str || "").split("|").map(p => p.trim()).filter(Boolean).map(p => {
-      const [a, b] = p.split("-"); const s = toMs(k, a), e = toMs(k, b); return s == null ? null : { t, s, e: e == null ? null : Math.max(e, s) };
-    }).filter(Boolean);
+      const parts = p.split("-"); if (parts.length !== 2) throw new Error(k + ": başlangıç-bitiş saatlerini kontrol et.");
+      const s = toMs(k, parts[0]), e = toMs(k, parts[1]);
+      if (s == null || (e != null && e < s)) throw new Error(k + ": bitiş başlangıçtan önce olamaz.");
+      return { t, s, e };
+    });
     text.replace(/^\ufeff/, "").split(/\r?\n/).forEach(line => {
       const c = line.split(";"), head = (c[0] || "").trim();
       if (line.trim() === "Molalar") { section = "breaks"; return; }
       if (head === "Tarih" && section === "days") { idx = {}; c.forEach((n, i) => { idx[n.trim()] = i; }); return; }
+      if (head === "Tarih" && section === "breaks") { breakHasType = c.some(n => n.trim() === "Tür"); return; }
       if (!/^\d{4}-\d{2}-\d{2}$/.test(head)) return;
-      const k = head, d = getDay(k);
-      const has = s => d.segs.some(z => Math.abs(z.s - s.s) < MIN && z.t === s.t);
+      if (!validDayKey(head)) throw new Error("Geçersiz tarih: " + head);
+      const k = head;
+      if (!pending.has(k)) pending.set(k, norm(state.days[k]));
+      const d = pending.get(k);
       if (section === "days" && idx) {
         let segs = [];
         if (idx["Ofis"] != null) segs = segs.concat(parseList(k, c[idx["Ofis"]], "o"));
         if (idx["Dış görev"] != null) segs = segs.concat(parseList(k, c[idx["Dış görev"]], "g"));
-        if (idx["Giriş"] != null) { const s = toMs(k, c[idx["Giriş"]]), e = toMs(k, c[idx["Çıkış"]]); if (s != null) segs.push({ t:"o", s, e: e == null ? null : Math.max(e, s) }); }
-        segs.forEach(s => { if (!has(s)) d.segs.push(s); });
+        if (idx["Giriş"] != null) { const s = toMs(k, c[idx["Giriş"]]), e = toMs(k, c[idx["Çıkış"]]); if (s != null) { if (e != null && e < s) throw new Error(k + ": bitiş başlangıçtan önce olamaz."); segs.push({ t:"o", s, e }); } }
+        segs.forEach(s => {
+          const old = d.segs.find(z => Math.abs(z.s - s.s) < MIN && z.t === s.t);
+          if (old) {
+            if ((old.e == null && s.e == null) || (old.e != null && s.e != null && Math.abs(old.e - s.e) < MIN)) return;
+            throw new Error(k + ": yedekteki çıkış mevcut kayıttan farklı. Önce günü uygulamadan düzelt.");
+          }
+          const err = segmentError(k, s, -1, d); if (err) throw new Error(k + ": " + err);
+          d.segs.push(s);
+        });
         if (idx["Gün türü"] != null) { const lbl = (c[idx["Gün türü"]] || "").trim(); const t = Object.keys(TYPES).find(z => TYPES[z] === lbl); if (t && t !== "normal") d.type = t; }
         if (idx["Mazeret izni"] != null && (c[idx["Mazeret izni"]] || "").trim() === "Evet") d.izin = true;
         if (idx["Canias’a girildi"] != null && (c[idx["Canias’a girildi"]] || "").trim() === "Evet") {
@@ -1343,18 +1386,22 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
         }
       } else if (section === "breaks") {
         const s0 = toMs(k, c[1]), e0 = toMs(k, c[2]);
-        if (s0 != null && e0 != null && e0 >= s0 && !d.breaks.some(b => Math.abs(b.s - s0) < MIN)) d.breaks.push((c[5] || "").trim() === "Tuvalet" ? { s:s0, e:e0, wc:true } : { s:s0, e:e0 });
+        if (s0 == null || e0 == null || e0 < s0) throw new Error(k + ": mola başlangıç ve bitişini kontrol et.");
+        const old = d.breaks.find(b => Math.abs(b.s - s0) < MIN), wc = (c[5] || "").trim() === "Tuvalet";
+        if (old) {
+          if (Math.abs(old.e - e0) >= MIN || (breakHasType && !!old.wc !== wc)) throw new Error(k + ": yedekteki mola mevcut kayıttan farklı. Önce günü uygulamadan düzelt.");
+        } else d.breaks.push(wc ? { s:s0, e:e0, wc:true } : { s:s0, e:e0 });
       }
-      touched.add(k);
     });
-    touched.forEach(writeDay);
-    return touched.size;
+    // Validate the complete file before touching state or saving any day.
+    pending.forEach((d, k) => { state.days[k] = d; writeDay(k); });
+    return pending.size;
   }
   $("importBtn").addEventListener("click", () => $("importFile").click());
   $("importFile").addEventListener("change", async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     try { const n = importCsv(await f.text()); render(); toast(n ? n + " günlük kayıt yüklendi." : "Dosyada kayıt bulunamadı."); }
-    catch(err) { toast("Dosya okunamadı."); }
+    catch(err) { toast("Yedek yüklenemedi. " + (err.message || "Dosya okunamadı.")); }
     e.target.value = "";
   });
 
