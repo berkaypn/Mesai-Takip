@@ -371,7 +371,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     </div>
     <p class="foot" id="setInfo"></p>
     <div class="sec"><h2>Nasıl hesaplanıyor?</h2></div>
-    <div class="card"><p class="foot" style="margin:0;font-size:.85rem;line-height:1.5">Fark, günü tamamlanmış kayıtlardan hesaplanır. Hafta içi yemek arası çalışmaya da molaya da sayılmaz. Hafta sonu ve izinli günlerde çalışılan sürenin tamamı artı yazılır, hafta sonu yemek arası düşülmez. Dış görevdeki molalar takip edilmez. Çekirdek saat içinde ofiste ya da dış görevde olmadığın süreler ihlal sayılır.</p></div>
+    <div class="card"><p class="foot" style="margin:0;font-size:.85rem;line-height:1.5">Fark, günü tamamlanmış kayıtlardan hesaplanır. Varsayılan yemek arası ofiste 12:00–13:00, dış görevde 12:00–12:30’dur. Ofisin yemek saatleri Ayarlar’dan değiştirilebilir; dış görevde aynı başlangıçtan itibaren en fazla 30 dakika düşülür. Günlük net hedef değişmez. Öğleye taşan açık mola yemek başlangıcında kapanır. Hafta sonu ve izinli günlerde çalışılan sürenin tamamı artı yazılır, hafta sonu yemek arası düşülmez. Dış görevdeki molalar takip edilmez. Çekirdek saat içinde ofiste ya da dış görevde olmadığın süreler ihlal sayılır.</p></div>
     <div class="sec"><h2>Yedekleme</h2></div>
     <div class="bk">
       <button type="button" id="export">Tüm kayıtları indir (CSV)</button>
@@ -606,6 +606,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   const lunchOn = () => S().lunchS != null && S().lunchE != null && S().lunchE > S().lunchS;
   const lunchWin = k => lunchOn() && !isWE(k) ? [{ s:at(k, S().lunchS), e:at(k, S().lunchE) }] : [];   // no lunch deduction on weekends
   const lunchLen = () => lunchOn() ? (S().lunchE - S().lunchS) * MIN : 0;
+  const taskLunchE = () => lunchOn() ? Math.min(S().lunchE, S().lunchS + 30) : null;
   const blank = () => ({ segs:[], breaks:[], izin:false, type:"normal", caniasConfirmed:"" });
   const isOff = (k, x) => isWE(k) || typeOf(x) !== "normal";
   const offLabel = (k, x) => typeOf(x) !== "normal" ? TYPES[typeOf(x)] : (isWE(k) ? "Hafta sonu" : "");
@@ -619,7 +620,15 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     return x.segs.map(s => ({ t:s.t, s:s.s, e: s.e != null ? s.e : (live ? Math.max(now, s.s) : null) })).filter(s => s.e != null);
   }
   const presence = (k, x, now) => merge(resolved(k, x, now));
-  const netWork = (k, x, now) => { const L = lunchWin(k); return presence(k, x, now).reduce((t, p) => t + (p.e - p.s) - ovLen(p.s, p.e, L), 0); };
+  // After the first 30 lunch minutes, only recorded external-duty time counts as work.
+  // For target estimates, the current open segment is assumed to continue through lunch.
+  function workLunch(k, x, now, project){
+    const L = lunchWin(k); if (!L.length) return L;
+    const end = at(k, taskLunchE());
+    const tasks = x.segs.filter(s => s.t === "g").map(s => ({ s:Math.max(s.s, end), e:s.e != null ? s.e : (k === dayKey(now) ? (project ? Math.max(now, L[0].e) : now) : end) })).filter(s => s.e > s.s);
+    return subtract(L, merge(tasks));
+  }
+  const netWork = (k, x, now) => { const L = workLunch(k, x, now); return presence(k, x, now).reduce((t, p) => t + (p.e - p.s) - ovLen(p.s, p.e, L), 0); };
   const complete = x => x.segs.length > 0 ? x.segs.every(s => s.e != null) : typeOf(x) !== "normal";
   const dayFark = (k, x, now) => netWork(k, x, now) - targetNet(k, x);
   function excluded(k, x, now){ return merge(lunchWin(k).concat(resolved(k, x, now).filter(s => s.t === "g"))); }
@@ -641,11 +650,14 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       ...g, kind: g.s === reqStart ? "Geç giriş" : (g.e === reqEnd ? "Erken çıkış" : "Çekirdek saatte yok")
     }));
   }
-  function targetEndFrom(k, startMs, remaining){
-    const L = lunchWin(k)[0];
-    let t = startMs; if (L && t >= L.s && t < L.e) t = L.e;
-    let e = t + remaining; if (L && t < L.s && e > L.s) e += L.e - L.s;
-    return e;
+  function targetEndFrom(k, startMs, remaining, x, now){
+    let t = startMs, left = remaining;
+    for (const L of workLunch(k, x, now, true)) {
+      if (L.e <= t) continue;
+      if (t < L.s) { const work = L.s - t; if (left <= work) return t + left; left -= work; }
+      t = L.e;
+    }
+    return t + left;
   }
 
   // ---------- timeline ----------
@@ -654,7 +666,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     if (!segs.length) return labels ? '<div class="bar"></div><div class="tlab"><span>' + (isOff(k, x) ? offLabel(k, x) : mHm(S().mesaiS)) + "</span><span>" + (isOff(k, x) ? "" : mHm(S().mesaiE)) + "</span></div>" : "";
     const we = isOff(k, x);
     const first = Math.min(...segs.map(s => s.s)), last = Math.max(...segs.map(s => s.e));
-    const tMark = we ? null : targetEndFrom(k, first, targetNet(k, x));
+    const tMark = we ? null : targetEndFrom(k, first, targetNet(k, x), x, now);
     let rs = first, re = last;
     if (!we) { rs = Math.min(rs, at(k, S().mesaiS)); re = Math.max(re, at(k, S().mesaiE), tMark); }
     const span = (re - rs) || 1, p = ms => Math.max(0, Math.min(100, (ms - rs) / span * 100));
@@ -663,7 +675,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     segs.forEach(s => { h += block(s.t, s.s, s.e); });
     const brs = x.breaks.slice(); if (state.open && dayKey(state.open) === k) brs.push({ s:state.open, e:now });
     brs.forEach(b => { h += block("b", b.s, b.e); });
-    lunchWin(k).forEach(l => { h += block("l", l.s, l.e); });
+    workLunch(k, x, now, true).forEach(l => { h += block("l", l.s, l.e); });
     violations(k, x, now).forEach(v => { h += block("v", v.s, v.e); });
     if (!we && S().coreS != null) [S().coreS, S().coreE].forEach(m => { h += '<div class="k" style="left:calc(' + p(at(k, m)) + '% - 1px)"></div>'; });
     if (tMark) h += '<div class="t" style="left:calc(' + p(tMark) + '% - 1px)"></div>';
@@ -709,8 +721,18 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   let lock = 0;
   const debounce = () => { const n = Date.now(); if (n - lock < 700) return false; lock = n; return true; };
   const fl = ms => Math.floor(ms / MIN) * MIN;     // records are kept at minute precision, same as what is shown and exported
+  function lunchCut(now){
+    if (!state.open) return null;
+    const L = lunchWin(dayKey(state.open))[0];
+    return L && state.open < L.s && now >= L.s ? L.s : null;
+  }
+  function autoCloseLunch(now){
+    const end = lunchCut(now); if (end == null) return false;
+    closeBreak(end); toast("Yemek arası başladı. Mola " + hm(end) + "’da kapatıldı."); return true;
+  }
   function closeBreak(now){
     if (!state.open) return;
+    const end = lunchCut(now); if (end != null) now = end;
     const s = state.open, wc = state.openWc === true, k = dayKey(s); state.open = null; state.openWc = false;
     const b = { s: fl(s), e: Math.max(fl(now), fl(s)) }; if (wc) b.wc = true;
     getDay(k).breaks.push(b); writeDay(k); writeOpen();
@@ -781,7 +803,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       label = cur.t === "g" ? "Dış görevde, bugün net" : "Bugün net çalışma"; big = hdur(work);
       if (off) sub = "Bugünkü çalışmanın hepsi artı yazılıyor.";
       else if (f < 0) {
-        const tEnd = targetEndFrom(today, now, -f), ce = S().coreE != null ? at(today, S().coreE) : 0;
+        const tEnd = targetEndFrom(today, now, -f, x, now), ce = S().coreE != null ? at(today, S().coreE) : 0;
         sub = "Hedefe <b>" + hdur(-f) + "</b> kaldı. Hedef çıkış <b>" + hm(Math.max(tEnd, ce)) + "</b>" + (ce > tEnd ? " (çekirdek saat)" : "") + ".";
       } else sub = 'Hedefi geçtin, fark <b class="plus">' + signed(f) + "</b>.";
     } else {
@@ -1077,6 +1099,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   // ---------- render ----------
   function render(){
     const now = Date.now(), today = dayKey(now);
+    autoCloseLunch(now);
     $("title").textContent = TITLES[tab];
     $("sub").textContent = tab === "today" ? dateLabel(today) : "";
     $("pill").hidden = tab !== "today";
@@ -1101,7 +1124,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     if (tab === "set") renderSet();
     if (sheet && !focusIn("#sheetBody")) renderSheet();
   }
-  function renderLive(){ if (tab === "today") renderHero(); }
+  function renderLive(){ if (autoCloseLunch(Date.now())) render(); else if (tab === "today") renderHero(); }
 
   // ---------- events ----------
   function needsConfirm(now){ const k = dayKey(now); return !isOff(k, dayX(k)) && S().coreE != null && now < at(k, S().coreE); }
@@ -1128,8 +1151,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       if (d.act === "office") startSeg("o", now);
       else if (d.act === "task") startSeg("g", now);
       else if (d.act === "end") endDay(now);
-      else if (d.act === "breakStart") { const c = curSeg(); if (c && c.t === "o" && !state.open) { state.open = now; state.openWc = false; writeOpen(); } }
-      else if (d.act === "wcStart") { const c = curSeg(); if (c && c.t === "o" && !state.open) { state.open = now; state.openWc = true; writeOpen(); } }
+      else if (d.act === "breakStart" || d.act === "wcStart") {
+        const c = curSeg();
+        if (c && c.t === "o" && !state.open) {
+          if (lunchWin(dayKey(now)).some(l => now >= l.s && now < l.e)) { toast("Şu an yemek arası; ayrıca mola başlatılmaz."); return; }
+          state.open = now; state.openWc = d.act === "wcStart"; writeOpen();
+        }
+      }
       else if (d.act === "breakEnd") closeBreak(now);
       render(); if (d.act === "wcStart" && state.open && state.openWc) rain(); return;
     }
@@ -1179,7 +1207,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       renderSheet(); render(); toast("Mola " + hm(s0) + " – " + hm(e0) + " eklendi."); return;
     }
     if (d.fullg) {
-      const k = d.fullg; getDay(k).segs.push({ t:"g", s:at(k, S().mesaiS), e:at(k, S().mesaiE) }); writeDay(k);
+      const k = d.fullg, shorter = lunchOn() && !isOff(k, dayX(k)) ? (S().lunchE - taskLunchE()) : 0;
+      getDay(k).segs.push({ t:"g", s:at(k, S().mesaiS), e:at(k, S().mesaiE - shorter) }); writeDay(k);
       renderSheet(); render(); toast("Tüm gün dış görev eklendi."); return;
     }
     if (d.delseg) {
