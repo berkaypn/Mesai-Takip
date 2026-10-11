@@ -371,12 +371,13 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     </div>
     <p class="foot" id="setInfo"></p>
     <div class="sec"><h2>Nasıl hesaplanıyor?</h2></div>
-    <div class="card"><p class="foot" style="margin:0;font-size:.85rem;line-height:1.5">Fark, günü tamamlanmış kayıtlardan hesaplanır. Varsayılan yemek arası ofiste 12:00–13:00, dış görevde 12:00–12:30’dur. Ofisin yemek saatleri Ayarlar’dan değiştirilebilir; dış görevde aynı başlangıçtan itibaren en fazla 30 dakika düşülür. Günlük net hedef değişmez. Öğleye taşan açık mola yemek başlangıcında kapanır. Hafta sonu ve izinli günlerde çalışılan sürenin tamamı artı yazılır, hafta sonu yemek arası düşülmez. Dış görevdeki molalar takip edilmez. Çekirdek saat içinde ofiste ya da dış görevde olmadığın süreler ihlal sayılır.</p></div>
+    <div class="card"><p class="foot" style="margin:0;font-size:.85rem;line-height:1.5">Fark, günü tamamlanmış kayıtlardan hesaplanır. Varsayılan yemek arası ofiste 12:00–13:00, dış görevde 12:00–12:30’dur. Yemek arasında ofisle dış görev arasında geçersen ilk 30 dakika her durumda, kalan kısım ofiste geçtiyse düşülür. Ofisin yemek saatleri Ayarlar’dan değiştirilebilir; dış görevde aynı başlangıçtan itibaren en fazla 30 dakika düşülür. Günlük net hedef değişmez. Öğleye taşan açık mola yemek başlangıcında kapanır. Hafta sonu ve izinli günlerde çalışılan sürenin tamamı artı yazılır, hafta sonu yemek arası düşülmez. Dış görevdeki molalar takip edilmez. Çekirdek saat içinde ofiste ya da dış görevde olmadığın süreler ihlal sayılır.</p></div>
     <div class="sec"><h2>Yedekleme</h2></div>
     <div class="bk">
       <button type="button" id="export">Tüm kayıtları indir (CSV)</button>
       <button type="button" id="importBtn">Yedekten geri yükle (CSV)</button>
     </div>
+    <p class="foot">Geri yükleme bu cihazdaki kayıtları silmez, eksik olanları ekler. Bir gün bu cihazda farklı kaydedilmişse bu cihazdaki korunur ve o gün atlanır.</p>
     <input type="file" id="importFile" accept=".csv,text/csv" hidden>
     <p class="note" id="note"></p>
   </section>
@@ -712,7 +713,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 
   // ---------- messages & confirm ----------
   let toastTimer = 0;
-  function toast(msg){ const el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
+  function toast(msg, ms){ const el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, ms || 3500); }
   function arm(btn, label, action){
     if (btn.dataset.armed === "1") { clearTimeout(Number(btn.dataset.timer)); btn.dataset.armed = ""; btn.classList.remove("armed"); btn.textContent = btn.dataset.orig; action(); return; }
     btn.dataset.orig = btn.textContent; btn.dataset.armed = "1"; btn.classList.add("armed"); btn.textContent = label;
@@ -1346,7 +1347,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   });
 
   function importCsv(text){
-    const pending = new Map(); let section = "days", idx = null, breakHasType = false;
+    // A broken file (bad time/date, reversed or clashing records inside the file) is rejected as a whole.
+    // A day that differs from what this device already has is skipped; the device copy wins.
+    const pending = new Map(), own = new Map(), skipped = new Set(); let section = "days", idx = null, breakHasType = false;
+    const skip = k => { pending.delete(k); skipped.add(k); };
     const toMs = (k, t) => { const value = (t || "").trim(); if (!value) return null; const m = hmToM(value); if (m == null) throw new Error(k + ": geçersiz saat " + value); return at(k, m); };
     const parseList = (k, str, t) => (str || "").split("|").map(p => p.trim()).filter(Boolean).map(p => {
       const parts = p.split("-"); if (parts.length !== 2) throw new Error(k + ": başlangıç-bitiş saatlerini kontrol et.");
@@ -1362,45 +1366,59 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       if (!/^\d{4}-\d{2}-\d{2}$/.test(head)) return;
       if (!validDayKey(head)) throw new Error("Geçersiz tarih: " + head);
       const k = head;
-      if (!pending.has(k)) pending.set(k, norm(state.days[k]));
-      const d = pending.get(k);
       if (section === "days" && idx) {
         let segs = [];
         if (idx["Ofis"] != null) segs = segs.concat(parseList(k, c[idx["Ofis"]], "o"));
         if (idx["Dış görev"] != null) segs = segs.concat(parseList(k, c[idx["Dış görev"]], "g"));
         if (idx["Giriş"] != null) { const s = toMs(k, c[idx["Giriş"]]), e = toMs(k, c[idx["Çıkış"]]); if (s != null) { if (e != null && e < s) throw new Error(k + ": bitiş başlangıçtan önce olamaz."); segs.push({ t:"o", s, e }); } }
-        segs.forEach(s => {
+        const imported = idx["Dış görev"] != null ? parseList(k, c[idx["Dış görev"]], "g") : [];
+        const file = own.get(k) || { segs:[] }; own.set(k, file);
+        segs.forEach(s => { const err = segmentError(k, s, -1, file); if (err) throw new Error(k + ": " + err); file.segs.push(s); });
+        if (skipped.has(k)) return;
+        if (!pending.has(k)) pending.set(k, norm(state.days[k]));
+        const d = pending.get(k);
+        const clash = segs.some(s => {
           const old = d.segs.find(z => Math.abs(z.s - s.s) < MIN && z.t === s.t);
           if (old) {
-            if ((old.e == null && s.e == null) || (old.e != null && s.e != null && Math.abs(old.e - s.e) < MIN)) return;
-            throw new Error(k + ": yedekteki çıkış mevcut kayıttan farklı. Önce günü uygulamadan düzelt.");
+            // Same record; a backup taken while it was still open is older than the closed copy here.
+            if (s.e == null || (old.e != null && Math.abs(old.e - s.e) < MIN)) return false;
+            return true;
           }
-          const err = segmentError(k, s, -1, d); if (err) throw new Error(k + ": " + err);
-          d.segs.push(s);
+          if (segmentError(k, s, -1, d)) return true;
+          d.segs.push(s); return false;
         });
+        if (clash) { skip(k); return; }
         if (idx["Gün türü"] != null) { const lbl = (c[idx["Gün türü"]] || "").trim(); const t = Object.keys(TYPES).find(z => TYPES[z] === lbl); if (t && t !== "normal") d.type = t; }
         if (idx["Mazeret izni"] != null && (c[idx["Mazeret izni"]] || "").trim() === "Evet") d.izin = true;
         if (idx["Canias’a girildi"] != null && (c[idx["Canias’a girildi"]] || "").trim() === "Evet") {
-          const imported = parseList(k, c[idx["Dış görev"]], "g");
           if (imported.length && taskSignature({ segs:imported }) === taskSignature(d)) d.caniasConfirmed = taskSignature(d);
         }
       } else if (section === "breaks") {
         const s0 = toMs(k, c[1]), e0 = toMs(k, c[2]);
         if (s0 == null || e0 == null || e0 < s0) throw new Error(k + ": mola başlangıç ve bitişini kontrol et.");
-        const old = d.breaks.find(b => Math.abs(b.s - s0) < MIN), wc = (c[5] || "").trim() === "Tuvalet";
+        if (skipped.has(k)) return;
+        if (!pending.has(k)) pending.set(k, norm(state.days[k]));
+        const d = pending.get(k), old = d.breaks.find(b => Math.abs(b.s - s0) < MIN), wc = (c[5] || "").trim() === "Tuvalet";
         if (old) {
-          if (Math.abs(old.e - e0) >= MIN || (breakHasType && !!old.wc !== wc)) throw new Error(k + ": yedekteki mola mevcut kayıttan farklı. Önce günü uygulamadan düzelt.");
+          if (Math.abs(old.e - e0) >= MIN || (breakHasType && !!old.wc !== wc)) skip(k);
         } else d.breaks.push(wc ? { s:s0, e:e0, wc:true } : { s:s0, e:e0 });
       }
     });
-    // Validate the complete file before touching state or saving any day.
+    // The whole file is checked before any day is saved.
     pending.forEach((d, k) => { state.days[k] = d; writeDay(k); });
-    return pending.size;
+    return { loaded:pending.size, skipped:[...skipped].sort() };
   }
   $("importBtn").addEventListener("click", () => $("importFile").click());
   $("importFile").addEventListener("change", async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
-    try { const n = importCsv(await f.text()); render(); toast(n ? n + " günlük kayıt yüklendi." : "Dosyada kayıt bulunamadı."); }
+    try {
+      const r = importCsv(await f.text()), sk = r.skipped; render();
+      if (!sk.length) toast(r.loaded ? r.loaded + " günlük kayıt yüklendi." : "Dosyada kayıt bulunamadı.");
+      else {
+        const days = sk.slice(0, 5).map(k => k.slice(8) + "." + k.slice(5, 7)).join(", ") + (sk.length > 5 ? " ve " + (sk.length - 5) + " gün daha" : "");
+        toast((r.loaded ? r.loaded + " günlük kayıt yüklendi. " : "") + sk.length + " gün atlandı, bu cihazdaki kayıt farklı: " + days + ".", 8000);
+      }
+    }
     catch(err) { toast("Yedek yüklenemedi. " + (err.message || "Dosya okunamadı.")); }
     e.target.value = "";
   });

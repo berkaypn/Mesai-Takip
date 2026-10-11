@@ -25,7 +25,7 @@ Hesap beklentileri uygulamanın aralık fonksiyonlarından üretilmedi. Ayrı bi
 | Geçmiş çıkış saati bozuluyordu | Geçmiş günün 08:00–10:00 ofis kaydında çıkışı boşaltmak, uyarı gösterirken kaydı 08:00–08:01’e çeviriyordu. | Geçersiz işlem reddedilir; eski saat aynen korunur. | Yüksek |
 | Aynı anda iki konum kabul ediliyordu | 08:00–10:00 ofisin üstüne 09:00–11:00 dış görev eklenebiliyor; düzenleme ve tüm gün kısayolu da çakışma yaratabiliyordu. İki açık kayıt CSV’den alınabiliyordu. | Yeni ekleme/düzeltmede çakışma ve birden fazla açık kayıt reddedilir. Kayıt bulunan günde tüm gün kısayolu yeni kayıt eklemez. | Yüksek |
 | Geçersiz CSV saatleri ve tarihleri kabul ediliyordu | `09:75` sonraki saate dönüştürülüyor, 31 Eylül saklanıyor, 17:30–08:00 sıfır süreye çevriliyordu. | Hata açıklanır; dosya tamamıyla doğrulanmadan hiçbir günü kaydetmez. | Yüksek |
-| Çelişen yedek sessizce yok sayılıyordu | Mevcut 07:30–16:30 görevin üstüne aynı başlangıçlı 07:30–17:00 yedeği yüklenince farklı çıkış sessizce atlanıyordu. | Kullanıcıya çelişki bildirilir. Mevcut kayıt korunur; önce gün uygulamadan düzeltilir. | Yüksek |
+| Çelişen yedek sessizce yok sayılıyordu | Mevcut 07:30–16:30 görevin üstüne aynı başlangıçlı 07:30–17:00 yedeği yüklenince farklı çıkış sessizce atlanıyordu. | O gün atlanır, cihazdaki kayıt korunur, diğer günler yüklenir; atlanan günler mesajda listelenir. Gün içinde alınmış (kaydı açık) yedek çelişki sayılmaz. | Yüksek |
 | Mola çakışmaları iki kez sayılıyordu | 10:00–10:30 ve 10:15–10:45 molaları 60 dakika sayılıyordu. WC ve aktif mola/yedek çakışmasında da aynı sorun vardı. | Birleşik süre 45 dakika sayılır. WC süresi de tekrar sayılmaz; Bugün ve Özet aktif mola hesabı tutarlıdır. | Orta |
 | İşte olunmayan boşluk mola sayılıyordu | Ofis 08:00–10:00, görev 11:00’den sonra; 09:50–11:10 molası 70 dakika gösteriliyordu. | Sadece ofiste geçen 09:50–10:00 bölümü, 10 dakika sayılır. Konum kaydı olmayan eski mola formatının geçmiş toplamı korunur. | Orta |
 | Elle dönüş saati öğle kapanışını aşıyordu | 11:50’de açık mola için 13:10 dönüşü elle girilince bitiş 13:10 saklanıyordu. | Önceki öğle kuralıyla uyumlu olarak bitiş 12:00 saklanır. WC türü korunur. | Orta |
@@ -72,13 +72,13 @@ Eylül 2026’nın her günü bir ofis ve bir dış görev ziyareti içerir. Haf
 
 ## Sonuç ve sınır
 
-- Karma gün/stres paketi: **2138/2138 geçti**.
+- Karma gün/stres paketi: **2138/2138 geçti**. CSV çelişki davranışı sonradan değiştirildi (yukarıdaki tablo); güncel paket 2145 kontrol içerir.
 - Önceki öğle/mola paketi: **31/31 geçti**.
 - `git diff --check`: temiz.
 - Test verileri kontrollü test ortamında üretildi; gerçek kullanıcı depolamasına bağlanılmadı.
 - Veri anahtarı ve mevcut kayıt formatı korunur. Eski hatalı/çakışan sürelerin hesaplanan toplamları düzeltmeyle değişebilir; ham kayıtlar toplu olarak silinmez veya değiştirilmez.
-- Çelişen veya geçersiz bir CSV reddedilir. Bu dosyalar otomatik üzerine yazılmaz; uyarıda belirtilen gün/saat kontrol edilmelidir.
-- Gerçek JavaScript, Node VM içinde kontrollü saatler ve DOM olay taklitleriyle çalıştırıldı. Gerçek tarayıcı, iPhone arka plan davranışı ve ekran yerleşimi bu testin kapsamında doğrulanmadı. Bu nedenle PR taslak olarak kalır; telefonda gerçek kullanım kontrolü merge öncesi yapılmalıdır.
+- Geçersiz (bozuk) bir CSV tamamen reddedilir. Cihazdaki kayıtla çelişen günler atlanır; cihazdaki kayıt hiçbir durumda yedekle ezilmez.
+- Gerçek JavaScript, Node VM içinde kontrollü saatler ve DOM olay taklitleriyle çalıştırıldı. Gerçek tarayıcı, iPhone arka plan davranışı ve ekran yerleşimi bu testin kapsamında doğrulanmadı. Bu nedenle telefonda gerçek kullanım kontrolü merge öncesi yapılmalıdır.
 
 ## Tekrar çalıştırma
 
