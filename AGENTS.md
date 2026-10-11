@@ -110,6 +110,10 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 - **Çekirdek saat ihlali** = çekirdek saat aralığı (yemek arası hariç) içinde ofiste ya da dış görevde olunmayan boşluklar. Türleri: "Geç giriş", "Erken çıkış", "Çekirdek saatte yok". Bugün için ihlal canlı hesaplanır.
 - Hiç kaydı olmayan hafta içi günler ihlal sayılmaz (izin/rapor günleri boşuna ihlal yazmasın diye).
 - Mazeret izni gün bazında bir işarettir (`izin: true`). İhlali sayımdan çıkarmaz, sadece "izin bekleyen" uyarısını kaldırır.
+- Kullanıcının onayladığı kararlar (2026-10-11), değiştirme:
+  - Resmi tatil / izin / rapor günlerinde çalışılırsa yemek arası **düşülür** (hafta sonundan farklı olarak). Ör. tatilde 08:00–17:30 = +8,5 saat.
+  - Çekirdek saat içindeki molalar **ihlal sayılmaz**.
+  - Bugün erken çıkılırsa ihlal süresi çekirdek saat bitene kadar **canlı artar** ve gün sonunda kesinleşir (15:00 çıkışı 15:30'da 30 dk, 16:30'da 90 dk). Bu sırada türü "Çekirdek saatte yok" görünür, çekirdek saat bitince "Erken çıkış" olur.
 - Mesai, çekirdek saat ve yemek saatleri Ayarlar'dan değiştirilebilir. Hedef, mesai süresi eksi yemek arası olarak türetilir.
 
 ### 3. Önemli kararlar ve nedenleri
@@ -166,14 +170,8 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 
 ### 5. Yapılmamış, aklımızdaki özellikler ve açık sorular
 
-**Kullanıcı onayını bekleyen kararlar**
-- Resmi tatil / izin / rapor günlerinde çalışılırsa yemek arası şu an **düşülüyor**. Hafta sonu gibi düşülmemeli mi?
-- Molalar çekirdek saat içinde olsa bile ihlal sayılmıyor. Bu doğru mu?
-- Bugün erken çıkılırsa ihlal süresi çekirdek saat bitene kadar canlı artıyor ve gün sonunda kesinleşiyor. Bu davranış uygun mu?
-
 **Yayın durumu**
 - GitHub Pages `main` dalının kökünden yayınlanıyor. `main`'e merge edilen her değişiklik doğrudan kullanıcılara çıkar; v3 arayüzü yayında.
-- Yukarıdaki üç soru için kullanıcıdan net bir karar kaydı yok; yayın bunlara bağlı değil.
 - Hesaplamayı ya da veri yapısını değiştiren sürümlerden önce kullanıcılara CSV yedeği aldırılması öneriliyor.
 
 **Önerilmiş ama yapılmamış**
