@@ -78,7 +78,7 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 
 ## Proje bağlamı
 
-> **Repo durumu (2026-10-07):** Repodaki `index.html`, aşağıda anlatılan v3 arayüzü değil, ondan önceki tek sayfalık sürüm (hafta sonu, dış görev, çekirdek saat ihlali ve izin/rapor/tatil türleri var). v3'e ait şu şeyler repo kodunda **yok**: alt sekmeler, takvim, alt düzenleme paneli, "Günün akışı", zaman damgalarının dakikaya yuvarlanması, 1 dakika içindeki ofis/dış görev geçişinin tür düzeltmesi, geçmiş günde boş bitiş saatinin engellenmesi, çıkışı eksik günlerin uyarı/Özet'te gösterilmesi, 6 haftalık demo verisi ve `window.__mt` test kancaları. Bunlarla ilgili bir iş yapmadan önce kullanıcıdan v3 kodunu iste; repodaki kodda var sayma.
+> **Repo durumu (2026-10-11):** Repodaki `index.html` aşağıda anlatılan v3 arayüzüdür (sekmeler, takvim, alt düzenleme paneli, "Günün akışı", dakikaya yuvarlama, demo modu ve `window.__mt` kancaları dahil). Sonradan eklenenler: takvimde dış görev çizgisi, molaları elle ekleme/düzeltme, tuvalet molası ve Canias hatırlatıcısı. Aşağıdaki bölüm sohbet dönemine ait bir özettir; kodla çeliştiği yerde kod esastır.
 
 > Bu bölüm, uygulamanın claude.ai sohbetinde geliştirildiği dönemin özetidir. Kesin olmayan noktalar "(emin değilim)" ile işaretlidir.
 
@@ -117,7 +117,7 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 **Teknik yapı**
 - Tek bir bağımsız `index.html` (HTML + CSS + vanilla JS), derleme adımı yok. Ek dosyalar: `sw.js`, `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`.
 - Yayın: **GitHub Pages**, repo adı `Mesai-Takip` (büyük/küçük harf önemli, Pages yolu da böyle), dosyalar repo kökünde. Kullanıcılar linki açıp "Ana ekrana ekle" ile PWA olarak kuruyor.
-- Service worker: Sayfa için önce ağ, sonra önbellek (güncellemeler gelsin diye); diğer dosyalar önbellekten. **Her sürümde `sw.js` içindeki `CACHE` adı artırılmalı** (şu an `mesai-takip-v3`).
+- Service worker: Sayfa için önce ağ, sonra önbellek (güncellemeler gelsin diye); diğer dosyalar önbellekten. **Her sürümde `sw.js` içindeki `CACHE` adı artırılmalı** (güncel değer `sw.js` başında).
 - Veri: `localStorage` anahtarı **`molaTakip:v1`** (tarihsel nedenle ismi "mola" kaldı, değiştirilmemeli). Uygulama `navigator.storage.persist()` istiyor.
 - Kod hem claude.ai artifact'ı hem bağımsız site olarak çalışacak şekilde yazıldı: `window.claude` varsa ve kullanıcı sayfanın sahibiyse veriler hesaba senkronize ediliyor. Yoksa sadece localStorage. Bağımsız mod tespiti: `!window.claude && window.top === window`. Claude Code'da geliştirmeye devam ederken artifact tarafındaki `window.claude` kodu kaldırılabilir (emin değilim, kullanıcıyla netleştirilmeli).
 
@@ -172,9 +172,9 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 - Bugün erken çıkılırsa ihlal süresi çekirdek saat bitene kadar canlı artıyor ve gün sonunda kesinleşiyor. Bu davranış uygun mu?
 
 **Yayın durumu**
-- GitHub Pages'te en son yüklenmesi önerilen sürüm: hafta sonu, dış görev, çekirdek saat ihlali ve izin/rapor/tatil türlerini içeren sürüm (eski tek sayfalık arayüz). Repodaki `index.html` bu sürüm; Pages'te yayında olup olmadığı doğrulanmadı (emin değilim).
-- **v3 arayüzü (sekmeler, takvim, alt panel) henüz GitHub'a yüklenmedi.** Yukarıdaki üç soru onaylanınca yayınlanacak.
-- Yayın öncesi kullanıcılara CSV yedeği aldırılması öneriliyor.
+- GitHub Pages `main` dalının kökünden yayınlanıyor. `main`'e merge edilen her değişiklik doğrudan kullanıcılara çıkar; v3 arayüzü yayında.
+- Yukarıdaki üç soru için kullanıcıdan net bir karar kaydı yok; yayın bunlara bağlı değil.
+- Hesaplamayı ya da veri yapısını değiştiren sürümlerden önce kullanıcılara CSV yedeği aldırılması öneriliyor.
 
 **Önerilmiş ama yapılmamış**
 - Gün türü olarak **yarım gün izin** ve **arife** (13:00'ten sonrası tatil).
