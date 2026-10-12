@@ -194,3 +194,11 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 - Harici bir giriş/çıkış sisteminin (PDKS) raporunu içe aktarıp gün gün fark gösterme. Özellik olarak istenmedi (emin değilim).
 - Hafta sonu ve fazla çalışma kayıtları için ayrı bir rapor (emin değilim).
 - Gerçek tarayıcıda çalışan arayüz testleri (hesaplama testleri `tests/` altında var).
+
+## Sites bildirimleri (taslak)
+
+- `notifications.js`, `notification-rules.js`, `notifications-config.js` isteğe bağlı bildirim istemcisidir. `available:false` kullanıcı erişimi onayı bekleyen servisi kapalı tutar.
+- `notifications-site/` ayrı Sites sunucusunun inceleme kaynaklarıdır; `docs/bildirim-kurulum.md` canlı durum ve yayın adımlarını belirtir. GitHub merge'i Sites sunucu kaynağını kendiliğinden yayınlamaz.
+- `.github/workflows/mesai-notifications.yml` upstream main kimliğiyle beş dakikalık kontrol yapar. OIDC depo ID'si ve workflow yolu kontrolü gevşetilmez. Özel VAPID anahtarını git'e ekleme.
+- Bildirim istemcisi mesai kaydını yazamaz. `molaTakip:v1` ve mevcut GitHub Pages adresi korunur; ham mesai geçmişi sunucuya gönderilemez.
+- Bildirim testleri: `node tests/notifications-client.cjs`, `node tests/notifications-sw.cjs`, `node notifications-site/tests/service.test.mjs`, `node notifications-site/tests/crypto.test.mjs`. Bunlar gerçek iPhone teslimini doğrulamaz.
