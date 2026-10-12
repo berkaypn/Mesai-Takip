@@ -197,7 +197,7 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 
 ## Sites bildirimleri (taslak)
 
-- `notifications.js`, `notification-rules.js`, `notifications-config.js` isteğe bağlı bildirim istemcisidir. `available:false` kullanıcı erişimi onayı bekleyen servisi kapalı tutar.
+- `notifications.js`, `notification-rules.js`, `notifications-config.js` isteğe bağlı bildirim istemcisidir. `available:true` yayınlanmış servise erişir. Bildirimler dışındaki performans ve sürüm güncelleme eklemeleri geri alındı. Canias perşembe 14:00; Günlük hedef ve Eksik kayıt isteğe bağlıdır.
 - `notifications-site/` ayrı Sites sunucusunun inceleme kaynaklarıdır; `docs/bildirim-kurulum.md` canlı durum ve yayın adımlarını belirtir. GitHub merge'i Sites sunucu kaynağını kendiliğinden yayınlamaz.
 - `.github/workflows/mesai-notifications.yml` upstream main kimliğiyle beş dakikalık kontrol yapar. OIDC depo ID'si ve workflow yolu kontrolü gevşetilmez. Özel VAPID anahtarını git'e ekleme.
 - Bildirim istemcisi mesai kaydını yazamaz. `molaTakip:v1` ve mevcut GitHub Pages adresi korunur; ham mesai geçmişi sunucuya gönderilemez.

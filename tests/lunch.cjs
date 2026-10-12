@@ -11,7 +11,7 @@ function boot(){
  class Clock extends Date {constructor(...a){super(...(a.length?a:[clock]))} static now(){return clock}}
  const doc={getElementById:el,activeElement:null,hidden:false,querySelectorAll:()=>[],querySelector:()=>null,addEventListener(t,f){events['doc:'+t]=f},createElement:()=>el('created'),head:{appendChild(){}},body:{style:{},appendChild(){}}};
  const window={top:{},scrollTo(){}};
- const ctx={window,document:doc,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},navigator:{clipboard:{async writeText(csv){ctx.csv=csv}}},Date:Clock,setTimeout:()=>0,clearTimeout(){},setInterval:f=>timers.push(f),clearInterval(){},console};
+ const ctx={window,document:doc,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},navigator:{clipboard:{async writeText(csv){ctx.csv=csv}}},Date:Clock,setTimeout:()=>0,clearTimeout(){},setInterval:f=>timers.push(f),console};
  let code=html.match(/<script>([\s\S]*?)<\/script>/)[1];
  code=code.replace('  render();\n  if (!DEMO) connect();','  globalThis.api={get state(){return state},set state(v){state=v},DEF,norm,netWork,dayFark,targetNet,violations,breakSum,workLunch,targetEndFrom,render,renderLive,importCsv,saveLocal,autoCloseLunch,closeBreak}; render();');
  vm.createContext(ctx);vm.runInContext(code,ctx);

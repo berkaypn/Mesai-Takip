@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,readdirSync} from 'node:fs';
-import {handle,dispatch,dispatchPhoneTests} from '../lib/service.js';
+import {handle,dispatch} from '../lib/service.js';
 import rules from '../lib/rules.js';
 
 function db(){
@@ -23,11 +23,11 @@ async function subscription(){const pair=await crypto.subtle.generateKey({name:'
 
 // These cover the cross-device and cancellation behaviors that matter for existing phone data.
 test('nine devices are isolated; no attendance ledger is accepted',async()=>{
-  const database=db(),now=at('2026-10-16',850),e=env(database),sub=await subscription();
-  for(let i=0;i<9;i++){const t=i.toString(16).padStart(64,'0');const body={seq:1,prefs:prefs(),snapshot:snapshot('2026-10-16',now,{caniasCount:i+1}),subscription:sub};let response=await handle(req('device','PUT',body,t),e,now);assert.equal(response.status,200);}
+  const database=db(),now=at('2026-10-15',850),e=env(database),sub=await subscription();
+  for(let i=0;i<9;i++){const t=i.toString(16).padStart(64,'0');const body={seq:1,prefs:prefs(),snapshot:snapshot('2026-10-15',now,{caniasCount:i+1}),subscription:sub};let response=await handle(req('device','PUT',body,t),e,now);assert.equal(response.status,200);}
   assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM devices').first()).n,9);
   const delivered=[];await dispatch(e,now,async(_env,_sub,p)=>{delivered.push(p);return {ok:true,status:201}});assert.equal(delivered.length,9);assert.equal(new Set(delivered.map(p=>p.body)).size,9);
-  let invalid=await handle(req('device','PUT',{seq:2,prefs:prefs(),snapshot:{...snapshot('2026-10-16',now),days:{segs:[]}}}),e,now);assert.equal(invalid.status,400);
+  let invalid=await handle(req('device','PUT',{seq:2,prefs:prefs(),snapshot:{...snapshot('2026-10-15',now),days:{segs:[]}}}),e,now);assert.equal(invalid.status,400);
   assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM devices').first()).n,9);database.close();
 });
 
@@ -42,7 +42,7 @@ test('closed break cancels reminder; stale state cannot overwrite it',async()=>{
 });
 
 test('Canias notification goes once per device and authenticated scheduler is required',async()=>{
-  const database=db(),day='2026-10-16',now=at(day,845),e=env(database),sub=await subscription();
+  const database=db(),day='2026-10-15',now=at(day,845),e=env(database),sub=await subscription();
   assert.equal((await handle(req('device','PUT',{seq:1,prefs:prefs(),snapshot:snapshot(day,now),subscription:sub}),e,now)).status,200);
   const bad=await handle(new Request('https://notify.example/api/notifications/dispatch',{method:'POST'}),e,now);assert.equal(bad.status,401);
   const sent=[];const sender=async(_env,_sub,payload)=>{sent.push(payload);return {ok:true,status:201}};
@@ -71,44 +71,24 @@ test('device limit also bounds disabled enrollment; large streamed body rejected
 });
 
 const forkOrigin='https://oguzhancirit.github.io';
-test('phone examples wait one minute, deliver once and cannot cross origins',async()=>{
- const database=db(),now=at('2026-10-16',845),e=env(database),sub=await subscription(),body={seq:1,prefs:prefs(),snapshot:snapshot('2026-10-16',now),subscription:sub};
+test('legacy preferences remain valid; optional reminders stay off; removed samples return 404',async()=>{
+ const database=db(),day='2026-10-15',now=at(day,850),e=env(database),sub=await subscription(),legacy=prefs();delete legacy.goal;delete legacy.missing;
+ const body={seq:1,prefs:legacy,snapshot:snapshot(day,now),subscription:sub};
  assert.equal((await handle(req('device','PUT',body,token,forkOrigin),e,now)).status,200);
- assert.equal((await handle(req('device','PUT',{...body,seq:2},token,origin),e,now)).status,403);
- assert.equal((await handle(req('test-later','POST',{scenario:'canias'},token,origin),e,now)).status,403);
- const queued=await handle(req('test-later','POST',{scenario:'canias'},token,forkOrigin),e,now);
- assert.equal(queued.status,200);assert.equal((await queued.json()).due,now+60000);
- const sent=[],sender=async(_e,_s,p)=>{sent.push(p);return {ok:true,status:201}};
- await dispatch(e,now,sender);assert.equal(sent.length,0);
- await dispatchPhoneTests(e,now+59999,sender);assert.equal(sent.length,0);
- await dispatchPhoneTests(e,now+60000,sender);assert.equal(sent.length,1);assert.equal(sent[0].kind,'notes');assert.match(sent[0].title,/TEST/);
- await dispatchPhoneTests(e,now+120000,sender);assert.equal(sent.length,1);database.close();
+ const row=await database.prepare('SELECT prefs,snapshot FROM devices').first();assert.equal(JSON.parse(row.prefs).goal,false);assert.equal(JSON.parse(row.prefs).missing,false);
+ assert.equal((await handle(req('test-later','POST',{scenario:'weekly'},token,forkOrigin),e,now)).status,404);
+ database.close();
 });
-test('disabling test notifications removes queued example and rejects new samples',async()=>{
- const database=db(),now=at('2026-10-12',600),e=env(database),sub=await subscription(),s=snapshot('2026-10-12',now);
- await handle(req('device','PUT',{seq:1,prefs:prefs(),snapshot:s,subscription:sub},token,forkOrigin),e,now);
- assert.equal((await handle(req('test-later','POST',{scenario:'weekly'},token,forkOrigin),e,now)).status,200);
- await handle(req('device','PUT',{seq:2,prefs:prefs({enabled:false}),snapshot:s},token,forkOrigin),e,now+1000);
- assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM phone_tests').first()).n,0);
- assert.equal((await handle(req('test-later','POST',{scenario:'weekly'},token,forkOrigin),e,now+61000)).status,404);
- await dispatchPhoneTests(e,now+61000,()=>{throw Error('should not send')});database.close();
-});
-
-test('immediate test followed by five rapid samples queues and delivers every scenario',async()=>{
- const database=db(),now=at('2026-10-12',850),e=env(database),sub=await subscription();
- const vapid=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);e.VAPID_PRIVATE_JWK=JSON.stringify(await crypto.subtle.exportKey('jwk',vapid.privateKey));e.VAPID_PUBLIC_KEY=Buffer.from(await crypto.subtle.exportKey('raw',vapid.publicKey)).toString('base64url');
- await handle(req('device','PUT',{seq:1,prefs:prefs(),snapshot:snapshot('2026-10-12',now),subscription:sub},token,forkOrigin),e,now);
- const original=globalThis.fetch;globalThis.fetch=async()=>new Response('',{status:201});
- try{
-  assert.equal((await handle(req('test','POST',{},token,forkOrigin),e,now)).status,200);
-  const limited=await handle(req('test','POST',{},token,forkOrigin),e,now+1000);assert.equal(limited.status,429);assert.equal((await limited.json()).retryAfter,4);
-  for(const scenario of ['break','exit','entry','canias','weekly']){
-   const r=await handle(req('test-later','POST',{scenario},token,forkOrigin),e,now+1000);assert.equal(r.status,200);assert.equal((await r.json()).due,now+61000);
-  }
-  assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM phone_tests').first()).n,5);
-  const duplicate=await handle(req('test-later','POST',{scenario:'canias'},token,forkOrigin),e,now+10000);assert.equal(duplicate.status,200);assert.equal((await duplicate.json()).due,now+61000);
-  assert.equal((await handle(req('test','POST',{},token,forkOrigin),e,now+5000)).status,200);
-  const sent=[];await dispatchPhoneTests(e,now+61000,async(_e,_s,p)=>{sent.push(p);return {ok:true,status:201}});assert.equal(sent.length,5);assert.equal(new Set(sent.map(p=>p.tag)).size,5);
-  await dispatchPhoneTests(e,now+62000,()=>{throw Error('no duplicate')});assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM phone_tests').first()).n,0);
- }finally{globalThis.fetch=original;database.close();}
+test('short notification rules: Thursday Canias, goal and past missing exits',()=>{
+ const thu='2026-10-15',fri='2026-10-16',t=at(thu,840),s=snapshot(thu,t,{targetAt:t,missingCount:2});
+ assert.equal(rules.due(s,prefs(),t-1).some(x=>x.kind==='notes'),false);
+ assert.equal(rules.due(s,prefs(),t).filter(x=>x.kind==='notes').length,1);
+ assert.equal(rules.due(snapshot(fri,at(fri,840)),prefs(),at(fri,840)).some(x=>x.kind==='notes'),false);
+ assert.equal(rules.due(s,prefs(),t).some(x=>x.tag.startsWith('goal:')),false);
+ const p=prefs({goal:true,missing:true});assert.equal(rules.due(s,p,t).some(x=>x.tag.startsWith('goal:')),true);
+ assert.equal(rules.due({...s,shiftOpen:false},p,t).some(x=>x.tag.startsWith('goal:')),false);
+ assert.equal(rules.due({...s,breakStart:t},p,t).some(x=>x.tag.startsWith('goal:')),false);
+ const friday=snapshot(fri,at(fri,960),{missingCount:2});assert.equal(rules.due(friday,p,at(fri,960)).filter(x=>x.tag.startsWith('missing:')).length,1);
+ assert.equal(rules.due({...friday,missingCount:0},p,at(fri,960)).some(x=>x.tag.startsWith('missing:')),false);
+ for(const payload of [...rules.due(s,p,t),...rules.due(friday,p,at(fri,960)),...rules.due(snapshot('2026-10-17',at('2026-10-17',600)),p,at('2026-10-17',600))]){assert.ok(payload.title.length<=35);assert.ok(payload.body.length<=75);}
 });

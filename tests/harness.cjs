@@ -12,7 +12,7 @@ function boot(options = {}) {
   class Clock extends Date { constructor(...args){super(...(args.length ? args : [clock]));} static now(){return clock;} }
   const document = {getElementById:el, activeElement:null, hidden:false, querySelectorAll:()=>[], querySelector:()=>null, addEventListener(type,fn){events['doc:'+type] = fn;}, createElement:()=>el('created'), head:{appendChild(){}}, body:{style:{},appendChild(){}}};
   const window = {top:{},scrollTo(){}};
-  const context = {window,document,localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},navigator:{clipboard:{async writeText(csv){context.csv=csv;}}},Date:Clock,setTimeout:()=>0,clearTimeout(){},setInterval:fn=>timers.push(fn),clearInterval(){},console};
+  const context = {window,document,localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},navigator:{clipboard:{async writeText(csv){context.csv=csv;}}},Date:Clock,setTimeout:()=>0,clearTimeout(){},setInterval:fn=>timers.push(fn),console};
   const html = options.html || fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   let source = html.match(/<script>([\s\S]*?)<\/script>/)[1];
   source = source.replace('  render();\n  if (!DEMO) connect();', '  globalThis.api={get state(){return state},set state(v){state=v},DEF,norm,netWork,dayFark,targetNet,violations,breakSum,wcSum,workLunch,targetEndFrom,timelineHtml,render,renderLive,importCsv,saveLocal,closeBreak,breakError,startSeg,endDay}; render();');

@@ -1,6 +1,5 @@
 import * as Push from './webpush.js';
 import rules from './rules.js';
-import {testScenarios,phoneTestPayload} from './phone-tests.js';
 
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 const int=(n,min,max)=>Number.isSafeInteger(n)&&n>=min&&n<=max;
@@ -26,15 +25,18 @@ export function validate(body,now){
   const p=body.prefs,s=body.snapshot;
   if(!p||!s||Object.keys(body).some(k=>!['seq','prefs','snapshot','subscription'].includes(k)))throw fail(400,'Geçersiz bildirim bilgisi.');
   for(const k of ['enabled','break','exit','entry','weekly','canias'])if(typeof p[k]!=='boolean')throw fail(400,'Geçersiz seçenek.');
+  for(const k of ['goal','missing'])if(p[k]!==undefined&&typeof p[k]!=='boolean')throw fail(400,'Geçersiz seçenek.');
   if(!int(p.entryMinute,360,720)||!int(p.exitMinute,900,1320))throw fail(400,'Geçersiz saat.');
-  const fields=['capturedAt','day','hasEntry','shiftOpen','breakStart','breakUntil','offDates','weekStart','weekMinutes','weekDays','weekMissing','caniasCount'];
+  const fields=['capturedAt','day','hasEntry','shiftOpen','breakStart','breakUntil','offDates','weekStart','weekMinutes','weekDays','weekMissing','caniasCount','targetAt','missingCount'];
   if(Object.keys(s).some(k=>!fields.includes(k))||!date(s.day)||!date(s.weekStart))throw fail(400,'Geçersiz tarih.');
   if(!int(s.capturedAt,now-2*86400000,now+300000)||typeof s.hasEntry!=='boolean'||typeof s.shiftOpen!=='boolean')throw fail(400,'Geçersiz durum.');
   for(const k of ['breakStart','breakUntil'])if(s[k]!=null&&!int(s[k],now-2*86400000,now+2*86400000))throw fail(400,'Geçersiz mola.');
   if(s.breakStart!=null&&(!s.shiftOpen||rules.day(s.breakStart)!==s.day))throw fail(400,'Mola ofis kaydıyla eşleşmiyor.');
   if(!Array.isArray(s.offDates)||s.offDates.length>180||s.offDates.some(k=>!date(k)))throw fail(400,'Geçersiz izin tarihleri.');
   if(!int(s.weekMinutes,-10080,10080)||!int(s.weekDays,0,5)||!int(s.weekMissing,0,5)||!int(s.caniasCount,0,100000))throw fail(400,'Geçersiz özet.');
-  return {seq:body.seq,prefs:Object.fromEntries(Object.keys(rules.defaults).concat('enabled').map(k=>[k,p[k]])),snapshot:Object.fromEntries(fields.map(k=>[k,s[k]])),subscription:body.subscription||null};
+  if(s.targetAt!=null&&!int(s.targetAt,rules.at(s.day,0),rules.at(s.day,1439)))throw fail(400,'Geçersiz hedef saati.');
+  if(!int(s.missingCount??0,0,100000))throw fail(400,'Geçersiz eksik kayıt.');
+  return {seq:body.seq,prefs:Object.fromEntries(Object.keys(rules.defaults).concat('enabled').map(k=>[k,p[k]??rules.defaults[k]])),snapshot:Object.fromEntries(fields.map(k=>[k,s[k]??(k==='missingCount'?0:null)])),subscription:body.subscription||null};
 }
 
 async function send(env,subscription,payload){
@@ -68,18 +70,6 @@ export async function dispatch(env,now=Date.now(),sender=send,channel=allowed){
   return result;
 }
 
-export async function dispatchPhoneTests(env,now=Date.now(),sender=send){
-  const result={sent:0,failed:0};
-  const {results}=await env.DB.prepare('SELECT phone_tests.* FROM phone_tests JOIN devices ON devices.id=phone_tests.device WHERE devices.origin=? AND due<=? AND expires>?').bind(testOrigin,now,now).all();
-  for(const job of results){
-    const claim=await env.DB.prepare('DELETE FROM phone_tests WHERE device=? AND scenario=? AND due=?').bind(job.device,job.scenario,job.due).run();if(!claim.meta.changes)continue;
-    const device=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(job.device).first();
-    if(!device?.subscription||device.origin!==testOrigin||!JSON.parse(device.prefs).enabled)continue;
-    try{const r=await sender(env,JSON.parse(device.subscription),phoneTestPayload(job.scenario,job.due));if(r.ok)result.sent++;else result.failed++;}catch{result.failed++;}
-  }
-  await env.DB.prepare('DELETE FROM phone_tests WHERE expires<=?').bind(now).run();return result;
-}
-
 export async function handle(request,env,now=Date.now()){
   const origin=request.headers.get('Origin'),url=new URL(request.url);
   const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin'};
@@ -98,8 +88,7 @@ export async function handle(request,env,now=Date.now()){
       const token=request.headers.get('Authorization')?.replace(/^Bearer /,'');
       const testEnv={...env,SCHEDULER_REPOSITORY:'oguzhancirit/Mesai-Takip',SCHEDULER_REPOSITORY_ID:'1408636153',SCHEDULER_REF:'refs/heads/test',SCHEDULER_WORKFLOW:'notification-phone-test.yml',SCHEDULER_EVENTS:'push'};
       if(!await Push.verifySchedulerJWT(token,url.origin,testEnv,now))throw fail(401,'Yetkisiz test zamanlayıcısı.');
-      const live=await dispatch(env,now,send,testOrigin),examples=await dispatchPhoneTests(env,now);
-      const result={sent:live.sent+examples.sent,failed:live.failed+examples.failed,expired:live.expired};return response(result,result.failed?503:200);
+      const result=await dispatch(env,now,send,testOrigin);return response(result,result.failed?503:200);
     }
     if(!allowedOrigins.has(origin))throw fail(403,'Bu kaynak kabul edilmiyor.');
     if(request.method==='OPTIONS')return response({ok:true});
@@ -122,17 +111,6 @@ export async function handle(request,env,now=Date.now()){
       if(!existing&&!update.meta.changes)throw fail(429,'Cihaz sınırına ulaşıldı.');
       return response({ok:true});
     }
-    if(url.pathname==='/api/notifications/test-later'&&request.method==='POST'){
-      if(origin!==testOrigin)throw fail(403,'Bu işlem yalnız test uygulamasında.');
-      const body=await bodyOf(request);if(!body||!testScenarios.includes(body.scenario)||Object.keys(body).some(k=>k!=='scenario'))throw fail(400,'Geçersiz test örneği.');
-      const row=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(id).first();
-      if(!row?.subscription||row.origin!==origin||!JSON.parse(row.prefs).enabled)throw fail(404,'Önce test bildirimlerini aç.');
-      const due=now+60000;
-      // Each fixed scenario has its own slot; repeated taps preserve the original due time.
-      await env.DB.prepare('INSERT INTO phone_tests(device,scenario,due,expires) VALUES(?,?,?,?) ON CONFLICT(device,scenario) DO UPDATE SET due=excluded.due,expires=excluded.expires WHERE phone_tests.expires<=?').bind(id,body.scenario,due,due+5*60000,now).run();
-      const job=await env.DB.prepare('SELECT due FROM phone_tests WHERE device=? AND scenario=?').bind(id,body.scenario).first();
-      return response({queued:true,due:job.due});
-    }
     if(url.pathname==='/api/notifications/test'&&request.method==='POST'){
       const row=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(id).first();
       if(row&&row.origin!==origin)throw fail(403,'Cihaz farklı uygulamaya ait.');
@@ -140,7 +118,7 @@ export async function handle(request,env,now=Date.now()){
       const cooldown=origin===testOrigin?5000:30000;
       const changed=await env.DB.prepare('UPDATE devices SET last_test=? WHERE id=? AND last_test <= ?').bind(now,id,now-cooldown).run();
       if(!changed.meta.changes){const fresh=await env.DB.prepare('SELECT last_test FROM devices WHERE id=?').bind(id).first();const retryAfter=Math.max(1,Math.ceil((fresh.last_test+cooldown-now)/1000));throw Object.assign(fail(429,'Yeni deneme bildirimi için '+retryAfter+' saniye bekle.'),{retryAfter});}
-      const pushed=await send(env,JSON.parse(row.subscription),{kind:'today',tag:'test:'+now,title:'🔔 Mesai Takip',body:'Bildirim bağlantın çalışıyor. Mesai kayıtların aynı cihazda korunuyor.',due:now,expiry:now+60000});
+      const pushed=await send(env,JSON.parse(row.subscription),{kind:'today',tag:'test:'+now,title:'🔔 Mesai Takip',body:'Bildirimler çalışıyor.',due:now,expiry:now+60000});
       if(!pushed.ok)throw fail(502,'Gönderim servisi bildirimi kabul etmedi.');
       return response({accepted:true});
     }
