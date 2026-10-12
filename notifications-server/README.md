@@ -25,6 +25,8 @@ npm run deploy
 
 Cron her dakika çalışır; Türkiye saatine göre mola 15 dk, çıkış 18:30, hafta içi giriş 08:30, Canias **cuma 14:00**, haftalık özet cumartesi 10:00 kontrol edilir. Cron yapılandırması Cloudflare’da etkin olmalıdır; yeni tetikleyicinin yayılması zaman alabilir. Push teslimi işletim sistemi, internet ve Odak ayarları nedeniyle gecikebilir; saniyesi saniyesine garanti verilmez.
 
+Workers Free planı D1 ve Cron destekler, ancak Cron başına yalnızca **10 ms CPU süresi** tanır. Dokuz cihazın aynı dakikadaki şifreli bildirimleri bu sınırı aşabilir. Miniflare denemesi canlı CPU limitini ölçmez. Önce Free planında tek cihazla ve sonra dokuz eşzamanlı Canias bildirimiyle gerçek zamanlayıcı çalışmasını, Cloudflare hata/CPU kayıtlarını ve cihaz teslimini doğrulayın. Düzenli limit hatası varsa ücretli plana kullanıcı onayı olmadan geçmeyin; Worker işini daha küçük parçalara bölmek veya farklı altyapı seçmek gerekir.
+
 ## Kurallar
 
 - Öğleden önce açılan mola için öğle başlangıcı bitiş sınırıdır; 11:50 molası 12:00’da otomatik kapandığından 12:05 bildirimi gönderilmez.

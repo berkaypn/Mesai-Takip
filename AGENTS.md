@@ -30,7 +30,7 @@ Testler paket kurulumu gerektirmez, repo kökünde çalıştırılır:
 node tests/lunch.cjs
 node tests/stress.cjs
 node tests/notifications-client.cjs
-cd notifications-server && npm ci && npm test && node tests/runtime-smoke.mjs
+cd notifications-server && npm ci && npm test && npx wrangler deploy --dry-run --outdir dist && node tests/runtime-smoke.mjs
 ```
 
 Testler `index.html` içindeki gerçek JS'i Node VM'de, sahte saat ve DOM taklitleriyle çalıştırır. Hesaplama kuralı değişirse test beklentilerini de güncelle. Gerçek tarayıcı, ekran yerleşimi ve telefonun arka plan davranışı bu testlerle doğrulanmaz. Değişikliği tarayıcıda da elle doğrula: giriş/çıkış, dış görev, mola, geçmiş gün düzenleme, izin işaretleme, CSV dışa/içe aktarma. Mevcut veriyle test etmek için önce gerçek bir CSV yedeği alıp geri yükle.
