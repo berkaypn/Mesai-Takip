@@ -31,8 +31,8 @@
     function schedule(){
       if(!prefs.enabled||!token||!api)return;
       // Attendance is read, never written by the notification module.
-      const snapshot=getSnapshot();
-      pending={seq:++seq,prefs:{...prefs},snapshot};save();
+      // Build the summary once when sending, including after offline recovery.
+      pending={seq:++seq,prefs:{...prefs},snapshot:null};save();
       clearTimeout(timer);timer=setTimeout(flush,300);
     }
     async function flush(){
