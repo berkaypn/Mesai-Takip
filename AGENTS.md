@@ -78,7 +78,7 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 
 ## Proje bağlamı
 
-> **Repo durumu (2026-10-07):** Repodaki `index.html`, aşağıda anlatılan v3 arayüzü değil, ondan önceki tek sayfalık sürüm (hafta sonu, dış görev, çekirdek saat ihlali ve izin/rapor/tatil türleri var). v3'e ait şu şeyler repo kodunda **yok**: alt sekmeler, takvim, alt düzenleme paneli, "Günün akışı", zaman damgalarının dakikaya yuvarlanması, 1 dakika içindeki ofis/dış görev geçişinin tür düzeltmesi, geçmiş günde boş bitiş saatinin engellenmesi, çıkışı eksik günlerin uyarı/Özet'te gösterilmesi, 6 haftalık demo verisi ve `window.__mt` test kancaları. Bunlarla ilgili bir iş yapmadan önce kullanıcıdan v3 kodunu iste; repodaki kodda var sayma.
+> **Repo durumu (2026-10-11):** Repodaki `index.html` aşağıda anlatılan v3 arayüzüdür (sekmeler, takvim, alt düzenleme paneli, "Günün akışı", dakikaya yuvarlama, demo modu ve `window.__mt` kancaları dahil). Sonradan eklenenler: takvimde dış görev çizgisi, molaları elle ekleme/düzeltme, tuvalet molası ve Canias hatırlatıcısı. Aşağıdaki bölüm sohbet dönemine ait bir özettir; kodla çeliştiği yerde kod esastır.
 
 > Bu bölüm, uygulamanın claude.ai sohbetinde geliştirildiği dönemin özetidir. Kesin olmayan noktalar "(emin değilim)" ile işaretlidir.
 
@@ -110,6 +110,10 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 - **Çekirdek saat ihlali** = çekirdek saat aralığı (yemek arası hariç) içinde ofiste ya da dış görevde olunmayan boşluklar. Türleri: "Geç giriş", "Erken çıkış", "Çekirdek saatte yok". Bugün için ihlal canlı hesaplanır.
 - Hiç kaydı olmayan hafta içi günler ihlal sayılmaz (izin/rapor günleri boşuna ihlal yazmasın diye).
 - Mazeret izni gün bazında bir işarettir (`izin: true`). İhlali sayımdan çıkarmaz, sadece "izin bekleyen" uyarısını kaldırır.
+- Kullanıcının onayladığı kararlar (2026-10-11), değiştirme:
+  - Resmi tatil / izin / rapor günlerinde çalışılırsa yemek arası **düşülür** (hafta sonundan farklı olarak). Ör. tatilde 08:00–17:30 = +8,5 saat.
+  - Çekirdek saat içindeki molalar **ihlal sayılmaz**.
+  - Bugün erken çıkılırsa ihlal süresi çekirdek saat bitene kadar **canlı artar** ve gün sonunda kesinleşir (15:00 çıkışı 15:30'da 30 dk, 16:30'da 90 dk). Bu sırada türü "Çekirdek saatte yok" görünür, çekirdek saat bitince "Erken çıkış" olur.
 - Mesai, çekirdek saat ve yemek saatleri Ayarlar'dan değiştirilebilir. Hedef, mesai süresi eksi yemek arası olarak türetilir.
 
 ### 3. Önemli kararlar ve nedenleri
@@ -117,7 +121,7 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 **Teknik yapı**
 - Tek bir bağımsız `index.html` (HTML + CSS + vanilla JS), derleme adımı yok. Ek dosyalar: `sw.js`, `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`.
 - Yayın: **GitHub Pages**, repo adı `Mesai-Takip` (büyük/küçük harf önemli, Pages yolu da böyle), dosyalar repo kökünde. Kullanıcılar linki açıp "Ana ekrana ekle" ile PWA olarak kuruyor.
-- Service worker: Sayfa için önce ağ, sonra önbellek (güncellemeler gelsin diye); diğer dosyalar önbellekten. **Her sürümde `sw.js` içindeki `CACHE` adı artırılmalı** (şu an `mesai-takip-v3`).
+- Service worker: Sayfa için önce ağ, sonra önbellek (güncellemeler gelsin diye); diğer dosyalar önbellekten. **Her sürümde `sw.js` içindeki `CACHE` adı artırılmalı** (güncel değer `sw.js` başında).
 - Veri: `localStorage` anahtarı **`molaTakip:v1`** (tarihsel nedenle ismi "mola" kaldı, değiştirilmemeli). Uygulama `navigator.storage.persist()` istiyor.
 - Kod hem claude.ai artifact'ı hem bağımsız site olarak çalışacak şekilde yazıldı: `window.claude` varsa ve kullanıcı sayfanın sahibiyse veriler hesaba senkronize ediliyor. Yoksa sadece localStorage. Bağımsız mod tespiti: `!window.claude && window.top === window`. Claude Code'da geliştirmeye devam ederken artifact tarafındaki `window.claude` kodu kaldırılabilir (emin değilim, kullanıcıyla netleştirilmeli).
 
@@ -166,15 +170,9 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 
 ### 5. Yapılmamış, aklımızdaki özellikler ve açık sorular
 
-**Kullanıcı onayını bekleyen kararlar**
-- Resmi tatil / izin / rapor günlerinde çalışılırsa yemek arası şu an **düşülüyor**. Hafta sonu gibi düşülmemeli mi?
-- Molalar çekirdek saat içinde olsa bile ihlal sayılmıyor. Bu doğru mu?
-- Bugün erken çıkılırsa ihlal süresi çekirdek saat bitene kadar canlı artıyor ve gün sonunda kesinleşiyor. Bu davranış uygun mu?
-
 **Yayın durumu**
-- GitHub Pages'te en son yüklenmesi önerilen sürüm: hafta sonu, dış görev, çekirdek saat ihlali ve izin/rapor/tatil türlerini içeren sürüm (eski tek sayfalık arayüz). Repodaki `index.html` bu sürüm; Pages'te yayında olup olmadığı doğrulanmadı (emin değilim).
-- **v3 arayüzü (sekmeler, takvim, alt panel) henüz GitHub'a yüklenmedi.** Yukarıdaki üç soru onaylanınca yayınlanacak.
-- Yayın öncesi kullanıcılara CSV yedeği aldırılması öneriliyor.
+- GitHub Pages `main` dalının kökünden yayınlanıyor. `main`'e merge edilen her değişiklik doğrudan kullanıcılara çıkar; v3 arayüzü yayında.
+- Hesaplamayı ya da veri yapısını değiştiren sürümlerden önce kullanıcılara CSV yedeği aldırılması öneriliyor.
 
 **Önerilmiş ama yapılmamış**
 - Gün türü olarak **yarım gün izin** ve **arife** (13:00'ten sonrası tatil).
