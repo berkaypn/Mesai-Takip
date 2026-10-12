@@ -15,6 +15,13 @@
       "when": 1791803478541,
       "tag": "0001_mean_naoko",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791805993722,
+      "tag": "0002_dry_blink",
+      "breakpoints": true
     }
   ]
 }

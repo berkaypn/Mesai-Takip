@@ -20,8 +20,8 @@ export const deliveries = sqliteTable("deliveries", {
 }, table => [primaryKey({columns:[table.device,table.tag]}),index("deliveries_lease").on(table.leaseUntil)]);
 
 export const phoneTests = sqliteTable("phone_tests", {
-  device: text("device").primaryKey(),
+  device: text("device").notNull(),
   scenario: text("scenario").notNull(),
   due: integer("due").notNull(),
   expires: integer("expires").notNull(),
-});
+}, table => [primaryKey({columns:[table.device,table.scenario]})]);

@@ -72,7 +72,7 @@ export async function dispatchPhoneTests(env,now=Date.now(),sender=send){
   const result={sent:0,failed:0};
   const {results}=await env.DB.prepare('SELECT phone_tests.* FROM phone_tests JOIN devices ON devices.id=phone_tests.device WHERE devices.origin=? AND due<=? AND expires>?').bind(testOrigin,now,now).all();
   for(const job of results){
-    const claim=await env.DB.prepare('DELETE FROM phone_tests WHERE device=? AND due=?').bind(job.device,job.due).run();if(!claim.meta.changes)continue;
+    const claim=await env.DB.prepare('DELETE FROM phone_tests WHERE device=? AND scenario=? AND due=?').bind(job.device,job.scenario,job.due).run();if(!claim.meta.changes)continue;
     const device=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(job.device).first();
     if(!device?.subscription||device.origin!==testOrigin||!JSON.parse(device.prefs).enabled)continue;
     try{const r=await sender(env,JSON.parse(device.subscription),phoneTestPayload(job.scenario,job.due));if(r.ok)result.sent++;else result.failed++;}catch{result.failed++;}
@@ -127,20 +127,23 @@ export async function handle(request,env,now=Date.now()){
       const body=await bodyOf(request);if(!body||!testScenarios.includes(body.scenario)||Object.keys(body).some(k=>k!=='scenario'))throw fail(400,'Geçersiz test örneği.');
       const row=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(id).first();
       if(!row?.subscription||row.origin!==origin||!JSON.parse(row.prefs).enabled)throw fail(404,'Önce test bildirimlerini aç.');
-      const changed=await env.DB.prepare('UPDATE devices SET last_test=? WHERE id=? AND last_test<?').bind(now,id,now-60000).run();if(!changed.meta.changes)throw fail(429,'Yeni örnek için bir dakika bekle.');
-      const due=now+60000;await env.DB.prepare('INSERT INTO phone_tests(device,scenario,due,expires) VALUES(?,?,?,?) ON CONFLICT(device) DO UPDATE SET scenario=excluded.scenario,due=excluded.due,expires=excluded.expires').bind(id,body.scenario,due,due+5*60000).run();
-      return response({queued:true,due});
+      const due=now+60000;
+      // Each fixed scenario has its own slot; repeated taps preserve the original due time.
+      await env.DB.prepare('INSERT INTO phone_tests(device,scenario,due,expires) VALUES(?,?,?,?) ON CONFLICT(device,scenario) DO UPDATE SET due=excluded.due,expires=excluded.expires WHERE phone_tests.expires<=?').bind(id,body.scenario,due,due+5*60000,now).run();
+      const job=await env.DB.prepare('SELECT due FROM phone_tests WHERE device=? AND scenario=?').bind(id,body.scenario).first();
+      return response({queued:true,due:job.due});
     }
     if(url.pathname==='/api/notifications/test'&&request.method==='POST'){
       const row=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(id).first();
       if(row&&row.origin!==origin)throw fail(403,'Cihaz farklı uygulamaya ait.');
       if(!row?.subscription||!JSON.parse(row.prefs).enabled)throw fail(404,'Bildirim aboneliği yok.');
-      const changed=await env.DB.prepare('UPDATE devices SET last_test=? WHERE id=? AND last_test < ?').bind(now,id,now-30000).run();
-      if(!changed.meta.changes)throw fail(429,'Test için 30 saniye bekle.');
+      const cooldown=origin===testOrigin?5000:30000;
+      const changed=await env.DB.prepare('UPDATE devices SET last_test=? WHERE id=? AND last_test <= ?').bind(now,id,now-cooldown).run();
+      if(!changed.meta.changes){const fresh=await env.DB.prepare('SELECT last_test FROM devices WHERE id=?').bind(id).first();const retryAfter=Math.max(1,Math.ceil((fresh.last_test+cooldown-now)/1000));throw Object.assign(fail(429,'Yeni deneme bildirimi için '+retryAfter+' saniye bekle.'),{retryAfter});}
       const pushed=await send(env,JSON.parse(row.subscription),{kind:'today',tag:'test:'+now,title:'🔔 Mesai Takip',body:'Bildirim bağlantın çalışıyor. Mesai kayıtların aynı cihazda korunuyor.',due:now,expiry:now+60000});
       if(!pushed.ok)throw fail(502,'Gönderim servisi bildirimi kabul etmedi.');
       return response({accepted:true});
     }
     throw fail(404,'Bulunamadı.');
-  }catch(error){return response({error:error.status?error.message:'Bildirim servisine ulaşılamadı.'},error.status||503);}
+  }catch(error){return response({error:error.status?error.message:'Bildirim servisine ulaşılamadı.',...(error.retryAfter?{retryAfter:error.retryAfter}:{})},error.status||503);}
 }

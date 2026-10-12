@@ -93,3 +93,22 @@ test('disabling test notifications removes queued example and rejects new sample
  assert.equal((await handle(req('test-later','POST',{scenario:'weekly'},token,forkOrigin),e,now+61000)).status,404);
  await dispatchPhoneTests(e,now+61000,()=>{throw Error('should not send')});database.close();
 });
+
+test('immediate test followed by five rapid samples queues and delivers every scenario',async()=>{
+ const database=db(),now=at('2026-10-12',850),e=env(database),sub=await subscription();
+ const vapid=await crypto.subtle.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']);e.VAPID_PRIVATE_JWK=JSON.stringify(await crypto.subtle.exportKey('jwk',vapid.privateKey));e.VAPID_PUBLIC_KEY=Buffer.from(await crypto.subtle.exportKey('raw',vapid.publicKey)).toString('base64url');
+ await handle(req('device','PUT',{seq:1,prefs:prefs(),snapshot:snapshot('2026-10-12',now),subscription:sub},token,forkOrigin),e,now);
+ const original=globalThis.fetch;globalThis.fetch=async()=>new Response('',{status:201});
+ try{
+  assert.equal((await handle(req('test','POST',{},token,forkOrigin),e,now)).status,200);
+  const limited=await handle(req('test','POST',{},token,forkOrigin),e,now+1000);assert.equal(limited.status,429);assert.equal((await limited.json()).retryAfter,4);
+  for(const scenario of ['break','exit','entry','canias','weekly']){
+   const r=await handle(req('test-later','POST',{scenario},token,forkOrigin),e,now+1000);assert.equal(r.status,200);assert.equal((await r.json()).due,now+61000);
+  }
+  assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM phone_tests').first()).n,5);
+  const duplicate=await handle(req('test-later','POST',{scenario:'canias'},token,forkOrigin),e,now+10000);assert.equal(duplicate.status,200);assert.equal((await duplicate.json()).due,now+61000);
+  assert.equal((await handle(req('test','POST',{},token,forkOrigin),e,now+5000)).status,200);
+  const sent=[];await dispatchPhoneTests(e,now+61000,async(_e,_s,p)=>{sent.push(p);return {ok:true,status:201}});assert.equal(sent.length,5);assert.equal(new Set(sent.map(p=>p.tag)).size,5);
+  await dispatchPhoneTests(e,now+62000,()=>{throw Error('no duplicate')});assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM phone_tests').first()).n,0);
+ }finally{globalThis.fetch=original;database.close();}
+});
