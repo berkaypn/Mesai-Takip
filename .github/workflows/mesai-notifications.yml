@@ -1,0 +1,22 @@
+name: Mesai Takip hatırlatmaları
+on:
+  schedule:
+    - cron: '3/5 * * * *'
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+concurrency:
+  group: mesai-notifications
+  cancel-in-progress: false
+jobs:
+  reminders:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hatırlatmaları kontrol et
+        env:
+          SITE_ORIGIN: https://mesai-takip-bildirimler.ozicirit9.chatgpt.site
+          GH_REPOSITORY: ${{ github.repository }}
+        run: node scripts/dispatch-notifications.mjs

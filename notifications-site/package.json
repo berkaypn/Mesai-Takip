@@ -1,0 +1,1 @@
+{"name":"mesai-notifications-source","private":true,"type":"module","engines":{"node":">=22.13"},"scripts":{"test":"node tests/service.test.mjs && node tests/crypto.test.mjs"}}

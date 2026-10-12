@@ -1,0 +1,38 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {webcrypto}=require('node:crypto'),{boot,ts,plain}=require('./harness.cjs');
+const rules=require('../notification-rules.js');
+let passed=0;const check=(name,fn)=>{fn();passed++;};
+function client(store,permission='granted',api='https://notify.example',available=true,fork=false){
+ let now=Date.now();class Clock extends Date {static now(){return now;}}
+ const events={},nodes={},calls=[],el=id=>nodes[id]||={checked:false,disabled:false,textContent:'',addEventListener(type,fn){events[id+':'+type]=fn;}};
+ const snapshot={capturedAt:Date.now(),day:'2026-10-12',hasEntry:true,shiftOpen:false,breakStart:null,breakUntil:null,offDates:[],weekStart:'2026-10-12',weekMinutes:0,weekDays:1,weekMissing:0,caniasCount:0};
+ const sub={async unsubscribe(){calls.push('unsubscribe');},toJSON(){return {endpoint:'https://fcm.googleapis.com/test',keys:{p256dh:'test',auth:'test'}};}};
+ const reg={pushManager:{async getSubscription(){return null;},async subscribe(){calls.push('subscribe');return sub;}}};
+ const sw={ready:Promise.resolve(reg),addEventListener(t,fn){events['sw:'+t]=fn;}};
+ const context={Date:Clock,window:{isSecureContext:true,PushManager:function(){},Notification:{},MesaiNotificationRules:rules,MesaiNotificationsConfig:{api,available,fork},addEventListener(t,fn){events['window:'+t]=fn;}},document:{hidden:false,getElementById:el,addEventListener(t,fn){events['doc:'+t]=fn;}},navigator:{serviceWorker:sw},Notification:{permission:permission==='granted'?'default':permission,async requestPermission(){calls.push('permission');this.permission=permission;return permission;}},localStorage:{getItem:k=>store.get(k)||null,setItem(k,v){assert.notEqual(k,'molaTakip:v1');store.set(k,v);}},crypto:webcrypto,atob,URLSearchParams,AbortController,location:{search:''},setTimeout:()=>1,clearTimeout(){},setInterval(){},async fetch(url,opts){calls.push(url);if(url.endsWith('/config'))return {ok:true,json:async()=>({publicKey:Buffer.alloc(65,1).toString('base64url')})};if(context.failFetch)throw Error('offline');if(url.endsWith('/test')&&context.responseError)return {ok:false,status:429,json:async()=>context.responseError};return {ok:true,json:async()=>({ok:true})};}};
+ vm.createContext(context);vm.runInContext(fs.readFileSync(require('path').join(__dirname,'..','notifications.js'),'utf8'),context);
+ const module=context.window.MesaiNotifications.create({getSnapshot:()=>snapshot,onOpen(t){calls.push('open:'+t);}});
+ return {context,module,events,calls,store,snapshot,el,advance(ms){now+=ms;module.show();}};
+}
+(async()=>{
+ for(let n=0;n<9;n++){
+  const raw=JSON.stringify({days:{['2026-10-'+String(n+1).padStart(2,'0')]:{segs:[{t:n%2?'g':'o',s:100,e:200}],breaks:[{s:120,e:130,wc:true}],caniasConfirmed:'preserve',type:'normal',izin:true}},open:150,openWc:true,set:{mesaiS:480,mesaiE:1050,lunchS:720,lunchE:780},unknownLegacyField:'preserve'});
+  const store=new Map([['molaTakip:v1',raw]]),c=client(store);assert.equal(store.get('molaTakip:v1'),raw);
+  await c.events['notifyEnable:click']();assert.equal(c.calls[0],'permission');assert.equal(JSON.parse(store.get('mesaiTakip:notifications:v1')).prefs.enabled,true);assert.equal(store.get('molaTakip:v1'),raw);
+  c.snapshot.shiftOpen=true;c.snapshot.breakStart=Date.now();c.module.schedule();c.context.failFetch=true;await c.events['window:online']();assert.equal(store.get('molaTakip:v1'),raw);assert.ok(JSON.parse(store.get('mesaiTakip:notifications:v1')).pending);
+  c.context.failFetch=false;await c.events['window:online']();assert.equal(JSON.parse(store.get('mesaiTakip:notifications:v1')).pending,null);
+  await c.events['notifyEnable:click']();assert.equal(JSON.parse(store.get('mesaiTakip:notifications:v1')).prefs.enabled,false);assert.equal(store.get('molaTakip:v1'),raw);passed++;
+ }
+ for(const permission of ['denied','default']){const store=new Map([['molaTakip:v1','unchanged']]),c=client(store,permission);await c.events['notifyEnable:click']();assert.equal(store.get('molaTakip:v1'),'unchanged');assert.equal(c.calls.some(x=>x.endsWith('/device')),false);passed++;}
+ check('private service never asks for phone permission',()=>{const c=client(new Map(),'granted','https://notify.example',false);assert.equal(c.el('notifyEnable').disabled,true);assert.deepEqual(c.calls,[]);});
+ check('unconfigured service never asks for permission',()=>{const c=client(new Map(),'granted','');assert.equal(c.el('notifyEnable').disabled,true);assert.deepEqual(c.calls,[]);});
+ {const store=new Map([['molaTakip:v1','unchanged']]),c=client(store);c.context.failFetch=true;await c.events['notifyEnable:click']();const saved=JSON.parse(store.get('mesaiTakip:notifications:v1'));assert.equal(saved.prefs.enabled,false);assert.equal(saved.pending.prefs.enabled,false);assert.ok(c.calls.includes('unsubscribe'));assert.equal(store.get('molaTakip:v1'),'unchanged');passed++;}
+ {const c=client(new Map());await c.events['notifyEnable:click']();c.snapshot.caniasCount=3;c.module.schedule();const other=client(c.store);assert.equal(other.store.get('molaTakip:v1'),undefined);await other.events['window:online']();assert.equal(JSON.parse(other.store.get('mesaiTakip:notifications:v1')).pending,null);passed++;}
+ check('notification clicks only choose an app tab',()=>{const c=client(new Map());c.events['sw:message']({data:{type:'mesai-open',tab:'notes'}});assert.equal(c.calls.at(-1),'open:notes');});
+ check('notification failure cannot interrupt recording a work segment',()=>{
+   const html=fs.readFileSync(require('path').join(__dirname,'..','index.html'),'utf8').replace('let notifyClient = null;','let notifyClient = {schedule(){throw new Error("notify-failure")},show(){throw new Error("notify-failure")}};');
+   const b=boot({html,now:ts('2026-10-12',480)});b.api.startSeg('o',b.now);b.setTime(ts('2026-10-12',1050));b.api.endDay(b.now);const d=b.api.state.days['2026-10-12'];assert.equal(d.segs[0].e,b.now);assert.equal(b.api.dayFark('2026-10-12',d,b.now),0);assert.deepEqual(JSON.parse(b.storage.get('molaTakip:v1')).days,plain(b.api.state.days));
+ });
+ {const store=new Map([['molaTakip:v1','real-records'],['mesaiTakip:notifications:v1','original-settings']]),c=client(store,'granted','https://notify.example',true,true);await c.events['notifyEnable:click']();assert.equal(store.get('molaTakip:v1'),'real-records');assert.equal(store.get('mesaiTakip:notifications:v1'),'original-settings');await c.events['notifyTest:click']();assert.equal(c.el('notifyTest').disabled,true);c.advance(5001);assert.equal(c.el('notifyTest').disabled,false);assert.equal(c.events['notify-sample-canias:click'],undefined);passed++;}
+ console.log(JSON.stringify({passed,method:'Actual client JS; existing attendance and fork notification identity preserved; sample controls removed'}));
+})().catch(e=>{console.error(e);process.exitCode=1;});
