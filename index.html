@@ -289,6 +289,7 @@ button{font:inherit; color:inherit}
 .note{font-size:.8rem; color:var(--muted); margin:1rem .2rem 0; text-align:center}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--muted); outline-offset:2px}
 @media (prefers-reduced-motion:reduce){.hero{transition:none}.btn:active{transform:none}.sheet{animation:none}}
+.notify-options{margin-top:.8rem}.notify-options label{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.7rem 0;border-top:1px solid var(--line);font-size:.85rem;font-weight:700}.notify-options small{display:block;font-size:.74rem;font-weight:400;color:var(--muted);margin-top:.2rem}.notify-options input{flex:none;width:1.15rem;height:1.15rem;accent-color:var(--plus)}.notify-card button:disabled{opacity:.5}.notify-card .bk{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 </style>
 </head>
 <body>
@@ -370,6 +371,19 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
       <div class="srow"><label for="lunchS">Yemek arası</label><span class="pair"><input id="lunchS" data-set="lunch" type="time">–<input id="lunchE" data-set="lunch" type="time"></span></div>
     </div>
     <p class="foot" id="setInfo"></p>
+    <div class="sec"><h2>Bildirimler</h2></div>
+    <div class="card notify-card">
+      <p class="foot" id="notifyStatus" role="status" style="margin-top:0">Bildirimler kapalı.</p>
+      <div class="bk"><button type="button" id="notifyEnable">Bildirimleri etkinleştir</button><button type="button" id="notifyTest" disabled>Test bildirimi gönder</button></div>
+      <div class="notify-options">
+        <label><span>Mola hatırlatması<small>Açık mola 15 dakika olunca, bir kez</small></span><input type="checkbox" id="notify-break" checked></label>
+        <label><span>Çıkış hatırlatması<small>18:30’dan sonra çıkış kaydı hâlâ açıksa</small></span><input type="checkbox" id="notify-exit" checked></label>
+        <label><span>Giriş hatırlatması<small>Hafta içi 08:30 · izin ve tatilde gönderilmez</small></span><input type="checkbox" id="notify-entry" checked></label>
+        <label><span>Haftalık özet<small>Cumartesi 10:00 · tamamlanan günlerin toplamı</small></span><input type="checkbox" id="notify-weekly" checked></label>
+        <label><span>Canias hatırlatması<small>Cuma 14:00 · girilmemiş dış görev varsa</small></span><input type="checkbox" id="notify-canias" checked></label>
+      </div>
+      <p class="foot" style="margin-bottom:0">Geçmişin cihazında kalır. Bildirim için cihaz aboneliğin, açık mola/mesai bilgisi, izin tarihleri ve gerekli özet toplamları servise iletilir. İnternet yoksa son iletilen bilgiler kullanılır. Bildirimler giriş veya çıkış kaydetmez.</p>
+    </div>
     <div class="sec"><h2>Nasıl hesaplanıyor?</h2></div>
     <div class="card"><p class="foot" style="margin:0;font-size:.85rem;line-height:1.5">Fark, günü tamamlanmış kayıtlardan hesaplanır. Varsayılan yemek arası ofiste 12:00–13:00, dış görevde 12:00–12:30’dur. Yemek arasında ofisle dış görev arasında geçersen ilk 30 dakika her durumda, kalan kısım ofiste geçtiyse düşülür. Ofisin yemek saatleri Ayarlar’dan değiştirilebilir; dış görevde aynı başlangıçtan itibaren en fazla 30 dakika düşülür. Günlük net hedef değişmez. Öğleye taşan açık mola yemek başlangıcında kapanır. Hafta sonu ve izinli günlerde çalışılan sürenin tamamı artı yazılır, hafta sonu yemek arası düşülmez. Dış görevdeki molalar takip edilmez. Çekirdek saat içinde ofiste ya da dış görevde olmadığın süreler ihlal sayılır.</p></div>
     <div class="sec"><h2>Yedekleme</h2></div>
@@ -398,6 +412,9 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 </div></div>
 <div class="toast" id="toast" role="status" hidden></div>
 
+<script src="notifications-config.js"></script>
+<script src="notification-rules.js"></script>
+<script src="notifications.js"></script>
 <script>
 (function(){
   const DEMO = false;
@@ -405,6 +422,8 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   const $ = id => document.getElementById(id);
   const DEF = { mesaiS:480, mesaiE:1050, coreS:510, coreE:990, lunchS:720, lunchE:780 };
   let state = { days:{}, open:null, openWc:false, set:{ ...DEF } };
+  let notifyClient = null;
+  function notifySchedule(){ try { notifyClient?.schedule(); } catch(e){} }
 
   const num = v => typeof v === "number" && isFinite(v);
   const TYPES = { normal:"Normal gün", yillik:"Yıllık izin", rapor:"Rapor", tatil:"Resmi tatil" };
@@ -523,11 +542,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     if (d && !taskSegs(d).length) d.caniasConfirmed = "";
     if (isEmpty(d)) delete state.days[key];
     saveLocal();
+    notifySchedule();
     const body = isEmpty(d) ? null : { date:key, segs:d.segs.map(s => ({ ...s })), breaks:d.breaks.map(b => ({ ...b })), izin:d.izin, type:typeOf(d), caniasConfirmed:d.caniasConfirmed || "" };
     enqueue(() => { const ref = db.doc("data/users/" + uid + "/d-" + key); return body ? ref.set(body) : ref.delete(); });
   }
-  function writeOpen(){ saveLocal(); const open = state.open, openWc = state.openWc === true; enqueue(() => db.doc("data/users/" + uid + "/state").set({ open, openWc })); }
-  function writeSettings(){ saveLocal(); const body = { ...state.set }; enqueue(() => db.doc("data/users/" + uid + "/settings").set(body)); }
+  function writeOpen(){ saveLocal(); notifySchedule(); const open = state.open, openWc = state.openWc === true; enqueue(() => db.doc("data/users/" + uid + "/state").set({ open, openWc })); }
+  function writeSettings(){ saveLocal(); notifySchedule(); const body = { ...state.set }; enqueue(() => db.doc("data/users/" + uid + "/settings").set(body)); }
 
   async function connect(){
     if (!window.claude || typeof window.claude.use !== "function") return;
@@ -1035,6 +1055,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   // ---------- settings ----------
   function renderSet(){
     ["mesaiS","mesaiE","coreS","coreE","lunchS","lunchE"].forEach(id => { const el = $(id); if (document.activeElement !== el) el.value = mHm(S()[id]); });
+    try { notifyClient?.show(); } catch(e){}
     $("setInfo").textContent = "Hafta içi net hedef " + hdur((S().mesaiE - S().mesaiS) * MIN - lunchLen()) + ".";
   }
 
@@ -1430,9 +1451,27 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   setInterval(() => { if (!focusIn("#sheetBody,#tab-set")) render(); }, 60000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
   if (DEMO) window.__mt = { get state(){ return state; }, set state(v){ state = v; }, norm, netWork, dayFark, violations, breakSum, complete, targetNet, isOff, presence, importCsv, render, dayKey, at, typeOf, missingDays, pendingDays };
+  function notificationSnapshot(){
+    const now=Date.now(),today=dayKey(now),x=norm(state.days[today]);
+    const start=window.MesaiNotificationRules.monday(today),end=window.MesaiNotificationRules.day(keyStart(start)+4*86400000+12*60*MIN);
+    let weekMinutes=0,weekDays=0,weekMissing=0;
+    for(const k of Object.keys(state.days).filter(k=>k>=start&&k<=end&&k<=today)){
+      const d=norm(state.days[k]);
+      if(complete(d)&&(d.segs.length||typeOf(d)!=="normal")){weekMinutes+=dayFark(k,d,now)/MIN;weekDays++;}
+      else if(d.segs.length)weekMissing++;
+    }
+    const b=state.open&&dayKey(state.open)===today?state.open:null,L=lunchWin(today)[0];
+    return {capturedAt:now,day:today,hasEntry:x.segs.length>0,shiftOpen:x.segs.some(s=>s.e==null),breakStart:b,breakUntil:b&&L&&b<L.s?L.s:null,
+      offDates:Object.keys(state.days).filter(k=>k>=today&&keyStart(k)<now+180*86400000&&typeOf(state.days[k])!=="normal"),weekStart:start,weekMinutes:Math.round(weekMinutes),weekDays,weekMissing,caniasCount:caniasPending(now).length};
+  }
+  if(!DEMO&&STANDALONE&&window.MesaiNotifications&&window.MesaiNotificationRules){
+    try{notifyClient=window.MesaiNotifications.create({getSnapshot:notificationSnapshot,onOpen(t){if(["today","notes","sum"].includes(t)){tab=t;render();}}});}
+    catch{$("notifyStatus").textContent="Bildirimler başlatılamadı. Mesai takibi etkilenmedi.";}
+  }
   render();
   if (!DEMO) connect();
 })();
 </script>
 </body>
 </html>
+

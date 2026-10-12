@@ -8,6 +8,8 @@ Build adımı, paket yöneticisi ve bağımlılık yok. Dosyalar olduğu gibi st
 
 - `index.html`: uygulamanın tamamı. CSS `<style>` içinde, JS tek bir IIFE olarak `<script>` içinde.
 - `sw.js`: service worker. Sayfa için network-first, diğer aynı origin dosyaları ve Google Fonts için cache-first.
+- `notifications.js`, `notification-rules.js`, `notifications-config.js`: bağımsız bildirim istemcisi, zaman kuralları ve servis adresi. Bildirim ayarı ayrı `mesaiTakip:notifications:v1` anahtarında tutulur.
+- `notifications-server/`: isteğe bağlı Cloudflare Worker + D1 Web Push servisi. Kurulum ve telefon kabul adımları bu klasörün README dosyasında.
 - `manifest.webmanifest`, `icon-192.png`, `icon-512.png`, `apple-touch-icon.png`: PWA kurulum dosyaları.
 - `tests/`: Node ile çalışan testler (`harness.cjs`, `lunch.cjs`, `stress.cjs`). Uygulamaya ait değil, `sw.js` `CORE` listesine eklenmez.
 - `docs/stress-test-raporu.md`: karma gün ve hata testlerinin raporu.
@@ -27,6 +29,8 @@ Testler paket kurulumu gerektirmez, repo kökünde çalıştırılır:
 ```sh
 node tests/lunch.cjs
 node tests/stress.cjs
+node tests/notifications-client.cjs
+cd notifications-server && npm ci && npm test && node tests/runtime-smoke.mjs
 ```
 
 Testler `index.html` içindeki gerçek JS'i Node VM'de, sahte saat ve DOM taklitleriyle çalıştırır. Hesaplama kuralı değişirse test beklentilerini de güncelle. Gerçek tarayıcı, ekran yerleşimi ve telefonun arka plan davranışı bu testlerle doğrulanmaz. Değişikliği tarayıcıda da elle doğrula: giriş/çıkış, dış görev, mola, geçmiş gün düzenleme, izin işaretleme, CSV dışa/içe aktarma. Mevcut veriyle test etmek için önce gerçek bir CSV yedeği alıp geri yükle.
@@ -44,6 +48,12 @@ Testler `index.html` içindeki gerçek JS'i Node VM'de, sahte saat ve DOM taklit
 - `sw.js` başındaki `const CACHE = "mesai-takip-vN";` değerini her PR'da bir artır (ör. `v3` → `v4`). Sadece doküman değişen PR'lar hariç.
 - Bunu yapmazsan kurulu uygulamalar eski ikonları, manifesti ve fontları cache'ten sunmaya devam eder; eski cache'ler sadece versiyon değişince silinir.
 - Yeni bir statik dosya eklersen `sw.js` içindeki `CORE` listesine de ekle.
+
+### Bildirimler ve canlı kurulum
+
+- Bildirim kodu `molaTakip:v1` anahtarını, CSV biçimini veya GitHub Pages adresini değiştiremez. Ham `days`/`segs` verisini sunucuya gönderme.
+- Yeni kullanıcı bildirimi veya zaman kuralı eklenirse istemci, Worker ve service worker davranışlarını birlikte kontrol et. Canias cuma 14:00, açık mola 15 dakika, çıkış 18:30, haftalık özet cumartesi 10:00 (Türkiye saati).
+- `notifications-config.js` içindeki `api` boşsa arayüz kurulum beklediğini söyler. Gerçek Worker ve D1 kurulup telefon testi geçmeden PR'ı yayın için hazır sayma. Özel VAPID anahtarını git'e koyma.
 
 ### localStorage veri yapısını bozma, kullanıcı verisi silinmesin
 
@@ -194,3 +204,4 @@ CSV yedeği kullanıcının tek dışa aktarma yoludur. İçe aktarma sütunlar�
 - Harici bir giriş/çıkış sisteminin (PDKS) raporunu içe aktarıp gün gün fark gösterme. Özellik olarak istenmedi (emin değilim).
 - Hafta sonu ve fazla çalışma kayıtları için ayrı bir rapor (emin değilim).
 - Gerçek tarayıcıda çalışan arayüz testleri (hesaplama testleri `tests/` altında var).
+

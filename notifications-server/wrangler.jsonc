@@ -1,0 +1,9 @@
+{
+  "name":"mesai-takip-notifications",
+  "main":"worker.mjs",
+  "compatibility_date":"2026-10-12",
+  "compatibility_flags":["nodejs_compat"],
+  "triggers":{"crons":["* * * * *"]},
+  "vars":{"ALLOWED_ORIGIN":"https://berkaypn.github.io","APP_URL":"https://berkaypn.github.io/Mesai-Takip/","VAPID_SUBJECT":"https://github.com/berkaypn/Mesai-Takip"},
+  "d1_databases":[{"binding":"DB","database_name":"mesai-notifications","database_id":"SET_AFTER_D1_CREATE","migrations_dir":"migrations"}]
+}
