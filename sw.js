@@ -1,4 +1,4 @@
-const CACHE = "mesai-takip-v12";
+const CACHE = "mesai-takip-v13";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png", "notifications-config.js", "notification-rules.js", "notifications.js"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {

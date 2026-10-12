@@ -8,6 +8,13 @@
       "when": 1791789943604,
       "tag": "0000_stiff_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791803478541,
+      "tag": "0001_mean_naoko",
+      "breakpoints": true
     }
   ]
 }

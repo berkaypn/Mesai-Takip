@@ -8,6 +8,7 @@ export const devices = sqliteTable("devices", {
   snapshot: text("snapshot").notNull(),
   updatedAt: integer("updated_at").notNull(),
   lastTest: integer("last_test").notNull().default(0),
+  origin: text("origin").notNull().default("https://berkaypn.github.io"),
 });
 
 export const deliveries = sqliteTable("deliveries", {
@@ -17,3 +18,10 @@ export const deliveries = sqliteTable("deliveries", {
   leaseUntil: integer("lease_until").notNull(),
   attempts: integer("attempts").notNull().default(1),
 }, table => [primaryKey({columns:[table.device,table.tag]}),index("deliveries_lease").on(table.leaseUntil)]);
+
+export const phoneTests = sqliteTable("phone_tests", {
+  device: text("device").primaryKey(),
+  scenario: text("scenario").notNull(),
+  due: integer("due").notNull(),
+  expires: integer("expires").notNull(),
+});

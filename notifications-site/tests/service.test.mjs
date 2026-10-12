@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {readFileSync} from 'node:fs';
-import {handle,dispatch} from '../lib/service.js';
+import {readFileSync,readdirSync} from 'node:fs';
+import {handle,dispatch,dispatchPhoneTests} from '../lib/service.js';
 import rules from '../lib/rules.js';
 
 function db(){
   const sqlite=new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(new URL('../drizzle/0000_stiff_black_queen.sql',import.meta.url),'utf8').replaceAll('--> statement-breakpoint',''));
+  for(const f of readdirSync(new URL('../drizzle/',import.meta.url)).filter(x=>x.endsWith('.sql')).sort())sqlite.exec(readFileSync(new URL('../drizzle/'+f,import.meta.url),'utf8').replaceAll('--> statement-breakpoint',''));
   return {prepare(sql){let args=[];return {bind(...values){args=values;return this},first(){return sqlite.prepare(sql).get(...args)||null},all(){return {results:sqlite.prepare(sql).all(...args)}},run(){return {meta:{changes:sqlite.prepare(sql).run(...args).changes}}}}},batch(queries){return Promise.all(queries.map(q=>q.run()))},close(){sqlite.close()}};
 }
 const origin='https://berkaypn.github.io',token='a'.repeat(64);
@@ -68,4 +68,28 @@ test('device limit also bounds disabled enrollment; large streamed body rejected
  assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM devices').first()).n,32);
  const large=new Request('https://notify.example/api/notifications/device',{method:'PUT',headers:{Origin:origin,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'x'.repeat(16385)});
  assert.equal((await handle(large,e,now)).status,413);database.close();
+});
+
+const forkOrigin='https://oguzhancirit.github.io';
+test('phone examples wait one minute, deliver once and cannot cross origins',async()=>{
+ const database=db(),now=at('2026-10-16',845),e=env(database),sub=await subscription(),body={seq:1,prefs:prefs(),snapshot:snapshot('2026-10-16',now),subscription:sub};
+ assert.equal((await handle(req('device','PUT',body,token,forkOrigin),e,now)).status,200);
+ assert.equal((await handle(req('device','PUT',{...body,seq:2},token,origin),e,now)).status,403);
+ assert.equal((await handle(req('test-later','POST',{scenario:'canias'},token,origin),e,now)).status,403);
+ const queued=await handle(req('test-later','POST',{scenario:'canias'},token,forkOrigin),e,now);
+ assert.equal(queued.status,200);assert.equal((await queued.json()).due,now+60000);
+ const sent=[],sender=async(_e,_s,p)=>{sent.push(p);return {ok:true,status:201}};
+ await dispatch(e,now,sender);assert.equal(sent.length,0);
+ await dispatchPhoneTests(e,now+59999,sender);assert.equal(sent.length,0);
+ await dispatchPhoneTests(e,now+60000,sender);assert.equal(sent.length,1);assert.equal(sent[0].kind,'notes');assert.match(sent[0].title,/TEST/);
+ await dispatchPhoneTests(e,now+120000,sender);assert.equal(sent.length,1);database.close();
+});
+test('disabling test notifications removes queued example and rejects new samples',async()=>{
+ const database=db(),now=at('2026-10-12',600),e=env(database),sub=await subscription(),s=snapshot('2026-10-12',now);
+ await handle(req('device','PUT',{seq:1,prefs:prefs(),snapshot:s,subscription:sub},token,forkOrigin),e,now);
+ assert.equal((await handle(req('test-later','POST',{scenario:'weekly'},token,forkOrigin),e,now)).status,200);
+ await handle(req('device','PUT',{seq:2,prefs:prefs({enabled:false}),snapshot:s},token,forkOrigin),e,now+1000);
+ assert.equal((await database.prepare('SELECT COUNT(*) AS n FROM phone_tests').first()).n,0);
+ assert.equal((await handle(req('test-later','POST',{scenario:'weekly'},token,forkOrigin),e,now+61000)).status,404);
+ await dispatchPhoneTests(e,now+61000,()=>{throw Error('should not send')});database.close();
 });

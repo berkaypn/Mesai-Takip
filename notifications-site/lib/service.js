@@ -1,10 +1,13 @@
 import * as Push from './webpush.js';
 import rules from './rules.js';
+import {testScenarios,phoneTestPayload} from './phone-tests.js';
 
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 const int=(n,min,max)=>Number.isSafeInteger(n)&&n>=min&&n<=max;
 const date=k=>typeof k==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(k)&&rules.day(rules.at(k,720))===k;
 const allowed='https://berkaypn.github.io';
+const testOrigin='https://oguzhancirit.github.io';
+const allowedOrigins=new Set([allowed,testOrigin]);
 const maxAge=8*86400000;
 const ready=env=>!!(env.DB&&env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_JWK&&env.VAPID_SUBJECT);
 const hash=async token=>Push.hash(token);
@@ -39,9 +42,9 @@ async function send(env,subscription,payload){
   return response;
 }
 
-export async function dispatch(env,now=Date.now(),sender=send){
+export async function dispatch(env,now=Date.now(),sender=send,channel=allowed){
   const result={sent:0,failed:0,expired:0};
-  const {results}=await env.DB.prepare('SELECT * FROM devices WHERE updated_at > ? ORDER BY updated_at DESC LIMIT 32').bind(now-maxAge).all();
+  const {results}=await env.DB.prepare('SELECT * FROM devices WHERE updated_at > ? AND origin=? ORDER BY updated_at DESC LIMIT 32').bind(now-maxAge,channel).all();
   for(const row of results){
     if(!row.subscription)continue;
     const due=rules.due(JSON.parse(row.snapshot),JSON.parse(row.prefs),now);
@@ -65,10 +68,22 @@ export async function dispatch(env,now=Date.now(),sender=send){
   return result;
 }
 
+export async function dispatchPhoneTests(env,now=Date.now(),sender=send){
+  const result={sent:0,failed:0};
+  const {results}=await env.DB.prepare('SELECT phone_tests.* FROM phone_tests JOIN devices ON devices.id=phone_tests.device WHERE devices.origin=? AND due<=? AND expires>?').bind(testOrigin,now,now).all();
+  for(const job of results){
+    const claim=await env.DB.prepare('DELETE FROM phone_tests WHERE device=? AND due=?').bind(job.device,job.due).run();if(!claim.meta.changes)continue;
+    const device=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(job.device).first();
+    if(!device?.subscription||device.origin!==testOrigin||!JSON.parse(device.prefs).enabled)continue;
+    try{const r=await sender(env,JSON.parse(device.subscription),phoneTestPayload(job.scenario,job.due));if(r.ok)result.sent++;else result.failed++;}catch{result.failed++;}
+  }
+  await env.DB.prepare('DELETE FROM phone_tests WHERE expires<=?').bind(now).run();return result;
+}
+
 export async function handle(request,env,now=Date.now()){
   const origin=request.headers.get('Origin'),url=new URL(request.url);
   const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin'};
-  if(origin===allowed)Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, PUT, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type'});
+  if(allowedOrigins.has(origin))Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, PUT, POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type'});
   const response=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
   try{
     if(url.pathname==='/api/notifications/health'&&request.method==='GET')return response({service:'Mesai Takip bildirimleri',ready:ready(env)});
@@ -78,7 +93,15 @@ export async function handle(request,env,now=Date.now()){
       if(!await Push.verifySchedulerJWT(token,url.origin,env,now))throw fail(401,'Yetkisiz zamanlayıcı.');
       const result=await dispatch(env,now);return response(result,result.failed?503:200);
     }
-    if(origin!==allowed)throw fail(403,'Bu kaynak kabul edilmiyor.');
+    if(url.pathname==='/api/notifications/dispatch-test'&&request.method==='POST'){
+      if(!ready(env))throw fail(503,'Bildirim servisi hazır değil.');
+      const token=request.headers.get('Authorization')?.replace(/^Bearer /,'');
+      const testEnv={...env,SCHEDULER_REPOSITORY:'oguzhancirit/Mesai-Takip',SCHEDULER_REPOSITORY_ID:'1408636153',SCHEDULER_REF:'refs/heads/test',SCHEDULER_WORKFLOW:'notification-phone-test.yml',SCHEDULER_EVENTS:'push'};
+      if(!await Push.verifySchedulerJWT(token,url.origin,testEnv,now))throw fail(401,'Yetkisiz test zamanlayıcısı.');
+      const live=await dispatch(env,now,send,testOrigin),examples=await dispatchPhoneTests(env,now);
+      const result={sent:live.sent+examples.sent,failed:live.failed+examples.failed,expired:live.expired};return response(result,result.failed?503:200);
+    }
+    if(!allowedOrigins.has(origin))throw fail(403,'Bu kaynak kabul edilmiyor.');
     if(request.method==='OPTIONS')return response({ok:true});
     if(!ready(env))throw fail(503,'Bildirim servisi hazır değil.');
     if(url.pathname==='/api/notifications/config'&&request.method==='GET')return response({publicKey:env.VAPID_PUBLIC_KEY});
@@ -87,19 +110,30 @@ export async function handle(request,env,now=Date.now()){
     const id=await hash(token);
     if(url.pathname==='/api/notifications/device'&&request.method==='PUT'){
       const body=await bodyOf(request);
-      const data=validate(body,now),existing=await env.DB.prepare('SELECT id,subscription FROM devices WHERE id=?').bind(id).first();
+      const data=validate(body,now),existing=await env.DB.prepare('SELECT id,subscription,origin FROM devices WHERE id=?').bind(id).first();
+      if(existing&&existing.origin!==origin)throw fail(403,'Cihaz farklı uygulamaya ait.');
       if(!existing&&!data.subscription&&data.prefs.enabled)throw fail(404,'Önce bildirimleri etkinleştir.');
       if(!existing){const count=await env.DB.prepare('SELECT COUNT(*) AS n FROM devices').first();if(count.n>=32)throw fail(429,'Cihaz sınırına ulaşıldı.');}
       let subscription=null;
       if(data.prefs.enabled&&data.subscription){try{subscription=await Push.validateSubscription(data.subscription);}catch{throw fail(400,'Geçersiz bildirim aboneliği.');}}
       if(data.prefs.enabled&&!subscription&&!existing?.subscription)throw fail(400,'Bildirim aboneliği eksik.');
-      const statement=env.DB.prepare('INSERT INTO devices(id,seq,subscription,prefs,snapshot,updated_at) SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM devices WHERE id=?) OR (SELECT COUNT(*) FROM devices)<32 ON CONFLICT(id) DO UPDATE SET seq=excluded.seq,subscription=CASE WHEN json_extract(excluded.prefs,\'$.enabled\') = 0 THEN NULL ELSE COALESCE(excluded.subscription,devices.subscription) END,prefs=excluded.prefs,snapshot=excluded.snapshot,updated_at=excluded.updated_at WHERE excluded.seq > devices.seq').bind(id,data.seq,subscription?JSON.stringify(subscription):null,JSON.stringify(data.prefs),JSON.stringify(data.snapshot),now,id);
-      const update=data.prefs.enabled?await statement.run():(await env.DB.batch([statement,env.DB.prepare("DELETE FROM deliveries WHERE device=? AND EXISTS(SELECT 1 FROM devices WHERE id=? AND seq=? AND json_extract(prefs,'$.enabled')=0)").bind(id,id,data.seq)]))[0];
+      const statement=env.DB.prepare('INSERT INTO devices(id,seq,subscription,prefs,snapshot,updated_at,origin) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM devices WHERE id=?) OR (SELECT COUNT(*) FROM devices)<32 ON CONFLICT(id) DO UPDATE SET seq=excluded.seq,subscription=CASE WHEN json_extract(excluded.prefs,\'$.enabled\') = 0 THEN NULL ELSE COALESCE(excluded.subscription,devices.subscription) END,prefs=excluded.prefs,snapshot=excluded.snapshot,updated_at=excluded.updated_at WHERE excluded.seq > devices.seq').bind(id,data.seq,subscription?JSON.stringify(subscription):null,JSON.stringify(data.prefs),JSON.stringify(data.snapshot),now,origin,id);
+      const update=data.prefs.enabled?await statement.run():(await env.DB.batch([statement,env.DB.prepare("DELETE FROM deliveries WHERE device=? AND EXISTS(SELECT 1 FROM devices WHERE id=? AND seq=? AND json_extract(prefs,'$.enabled')=0)").bind(id,id,data.seq),env.DB.prepare("DELETE FROM phone_tests WHERE device=? AND EXISTS(SELECT 1 FROM devices WHERE id=? AND seq=? AND json_extract(prefs,'$.enabled')=0)").bind(id,id,data.seq)]))[0];
       if(!existing&&!update.meta.changes)throw fail(429,'Cihaz sınırına ulaşıldı.');
       return response({ok:true});
     }
+    if(url.pathname==='/api/notifications/test-later'&&request.method==='POST'){
+      if(origin!==testOrigin)throw fail(403,'Bu işlem yalnız test uygulamasında.');
+      const body=await bodyOf(request);if(!body||!testScenarios.includes(body.scenario)||Object.keys(body).some(k=>k!=='scenario'))throw fail(400,'Geçersiz test örneği.');
+      const row=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(id).first();
+      if(!row?.subscription||row.origin!==origin||!JSON.parse(row.prefs).enabled)throw fail(404,'Önce test bildirimlerini aç.');
+      const changed=await env.DB.prepare('UPDATE devices SET last_test=? WHERE id=? AND last_test<?').bind(now,id,now-60000).run();if(!changed.meta.changes)throw fail(429,'Yeni örnek için bir dakika bekle.');
+      const due=now+60000;await env.DB.prepare('INSERT INTO phone_tests(device,scenario,due,expires) VALUES(?,?,?,?) ON CONFLICT(device) DO UPDATE SET scenario=excluded.scenario,due=excluded.due,expires=excluded.expires').bind(id,body.scenario,due,due+5*60000).run();
+      return response({queued:true,due});
+    }
     if(url.pathname==='/api/notifications/test'&&request.method==='POST'){
       const row=await env.DB.prepare('SELECT * FROM devices WHERE id=?').bind(id).first();
+      if(row&&row.origin!==origin)throw fail(403,'Cihaz farklı uygulamaya ait.');
       if(!row?.subscription||!JSON.parse(row.prefs).enabled)throw fail(404,'Bildirim aboneliği yok.');
       const changed=await env.DB.prepare('UPDATE devices SET last_test=? WHERE id=? AND last_test < ?').bind(now,id,now-30000).run();
       if(!changed.meta.changes)throw fail(429,'Test için 30 saniye bekle.');

@@ -68,7 +68,8 @@ export async function verifySchedulerJWT(token,origin,env,now=Date.now()){
     const seconds=Math.floor(now/1000);
     if(![claims.exp,claims.nbf,claims.iat].every(Number.isFinite))return false;
     if(claims.iss!=='https://token.actions.githubusercontent.com'||claims.aud!==origin||claims.exp<=seconds||claims.nbf>seconds+30||claims.iat>seconds+30||seconds-claims.iat>600)return false;
-    if(claims.repository!==env.SCHEDULER_REPOSITORY||String(claims.repository_id)!==String(env.SCHEDULER_REPOSITORY_ID)||claims.ref!=='refs/heads/main'||claims.workflow_ref!==env.SCHEDULER_REPOSITORY+'/.github/workflows/mesai-notifications.yml@refs/heads/main'||!['schedule','workflow_dispatch'].includes(claims.event_name))return false;
+    const ref=env.SCHEDULER_REF||'refs/heads/main',workflow=env.SCHEDULER_WORKFLOW||'mesai-notifications.yml',events=env.SCHEDULER_EVENTS?env.SCHEDULER_EVENTS.split(','):['schedule','workflow_dispatch'];
+    if(claims.repository!==env.SCHEDULER_REPOSITORY||String(claims.repository_id)!==String(env.SCHEDULER_REPOSITORY_ID)||claims.ref!==ref||claims.workflow_ref!==env.SCHEDULER_REPOSITORY+'/.github/workflows/'+workflow+'@'+ref||!events.includes(claims.event_name))return false;
     if(!jwksCache||now-jwksAt>900000||!jwksCache.keys.some(k=>k.kid===header.kid)){
       const r=await fetch('https://token.actions.githubusercontent.com/.well-known/jwks',{signal:AbortSignal.timeout(10000)});if(!r.ok)return false;jwksCache=await r.json();jwksAt=now;
     }

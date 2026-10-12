@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const source=fs.readFileSync(path.join(__dirname,'../sw.js'),'utf8'),events={},shown=[];
 const context={self:{addEventListener(t,fn){events[t]=fn},registration:{scope:'https://berkaypn.github.io/Mesai-Takip/',showNotification(title,options){shown.push({title,options});return Promise.resolve();}},clients:{async matchAll(){return []},async openWindow(url){context.opened=url}}},Date,URL,console};
 vm.createContext(context);vm.runInContext(source,context);
-assert.match(source,/mesai-takip-v12/);
+assert.match(source,/mesai-takip-v13/);
 for(const file of ['notifications-config.js','notification-rules.js','notifications.js']){assert.ok(source.includes(file));assert.ok(fs.statSync(path.join(__dirname,'..',file)).size>0);}
 (async()=>{
  for(const data of [{kind:'notes',tag:'canias',title:'Canias',body:'2 dış görev',expiry:Date.now()+60000},{kind:'today',title:'OLD',body:'OLD',expiry:0},null]){

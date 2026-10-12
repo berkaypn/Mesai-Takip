@@ -1,8 +1,9 @@
 (function(){
   "use strict";
-  const KEY="mesaiTakip:notifications:v1", rules=window.MesaiNotificationRules;
+  const rules=window.MesaiNotificationRules;
   function create({getSnapshot,onOpen}){
     const config=window.MesaiNotificationsConfig||{};
+    const KEY=config.testMode?"mesaiTakip:notifications:phoneTest:v1":"mesaiTakip:notifications:v1";
     const el=id=>document.getElementById(id),api=(config.available===false?"":config.api||"").replace(/\/$/,"");
     const defaults={...rules.defaults,enabled:false};
     let prefs={...defaults},token=null,seq=0,pending=null,timer=0,busy=false,storageOK=true,message="";
@@ -18,6 +19,7 @@
       el("notifyEnable").textContent=prefs.enabled?"Bildirimleri kapat":"Bildirimleri etkinleştir";
       el("notifyTest").disabled=!api||!prefs.enabled||permission!=="granted"||busy;
       for(const name of ["break","exit","entry","weekly","canias"]){el("notify-"+name).checked=prefs[name];el("notify-"+name).disabled=busy;}
+      if(config.testMode)for(const name of ["break","exit","entry","weekly","canias"]){const button=el("notify-sample-"+name);if(button)button.disabled=!prefs.enabled||permission!=="granted"||busy;}
     }
     async function request(path,body,method="POST"){
       const ctrl=new AbortController(),timeout=setTimeout(()=>ctrl.abort(),10000);
@@ -74,8 +76,15 @@
       catch{message="Test bildirimi gönderilemedi. Mesai takibi etkilenmedi.";}
       finally{busy=false;show();}
     }
+    async function sample(scenario){
+      if(!config.testMode||busy||!prefs.enabled)return;busy=true;show();
+      try{await request("/test-later",{scenario});message="Örnek bildirim bir dakika sonrası için planlandı. Şimdi uygulamayı kapatıp bekleyebilirsin.";}
+      catch{message="Test planlanamadı. Yeni bir örnek için bir dakika bekleyip tekrar dene.";}
+      finally{busy=false;show();}
+    }
     el("notifyEnable").addEventListener("click",enable);el("notifyTest").addEventListener("click",test);
     for(const name of ["break","exit","entry","weekly","canias"])el("notify-"+name).addEventListener("change",e=>{prefs[name]=e.target.checked;save();schedule();show();});
+    if(config.testMode)for(const name of ["break","exit","entry","weekly","canias"])el("notify-sample-"+name)?.addEventListener("click",()=>sample(name));
     window.addEventListener("online",flush);
     document.addEventListener("visibilitychange",()=>{if(!document.hidden){show();schedule();if(!prefs.enabled&&pending)flush();}});
     navigator.serviceWorker?.addEventListener("message",e=>{if(e.data?.type==="mesai-open")onOpen(e.data.tab);});
